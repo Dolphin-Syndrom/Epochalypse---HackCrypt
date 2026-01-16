@@ -19,7 +19,13 @@ class Settings(BaseSettings):
     PORT: int = 8000
     
     # CORS Settings
-    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:8080"]
+    CORS_ORIGINS: List[str] = [
+        "http://localhost:3000", 
+        "http://localhost:3001",
+        "http://localhost:8080",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:3001",
+    ]
     
     # Model Settings
     MODEL_PATH: str = "./models/weights"
