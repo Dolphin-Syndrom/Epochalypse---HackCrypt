@@ -135,16 +135,64 @@ class ModelManager:
         Returns:
             Aggregated detection results
         """
-        # TODO: Implement in Commit 2
-        # 1. Convert bytes to PIL Image
-        # 2. Run through registered detectors
-        # 3. Aggregate results using meta-learner
-        return {
-            "is_fake": False,
-            "confidence": 0.0,
-            "model_scores": {},
-            "error": "Detection not yet implemented"
-        }
+        from io import BytesIO
+        from PIL import Image
+        
+        if not self._detectors:
+            return {
+                "is_fake": False,
+                "confidence": 0.0,
+                "model_scores": {},
+                "error": "No detectors registered"
+            }
+        
+        try:
+            # Convert bytes to PIL Image
+            image = Image.open(BytesIO(image_bytes)).convert("RGB")
+            
+            # Collect results from all detectors
+            model_scores = {}
+            all_predictions = []
+            
+            for name, detector in self._detectors.items():
+                try:
+                    result = detector.detect(image)
+                    model_scores[name] = result.get("confidence", 0.0)
+                    all_predictions.append({
+                        "name": name,
+                        "is_fake": result.get("is_fake", False),
+                        "confidence": result.get("confidence", 0.0),
+                        "fake_probability": result.get("fake_probability", 0.0)
+                    })
+                except Exception as e:
+                    logger.error(f"Detector {name} failed: {e}")
+                    model_scores[name] = {"error": str(e)}
+            
+            # Aggregate results (simple majority voting for now)
+            fake_votes = sum(1 for p in all_predictions if p["is_fake"])
+            total_votes = len(all_predictions)
+            
+            # Average confidence
+            avg_confidence = sum(p["confidence"] for p in all_predictions) / total_votes if total_votes > 0 else 0.0
+            
+            # Final prediction
+            is_fake = fake_votes > total_votes / 2 if total_votes > 0 else False
+            
+            return {
+                "is_fake": is_fake,
+                "confidence": avg_confidence,
+                "model_scores": model_scores,
+                "detailed_predictions": all_predictions
+            }
+            
+        except Exception as e:
+            logger.error(f"Image detection failed: {e}")
+            return {
+                "is_fake": False,
+                "confidence": 0.0,
+                "model_scores": {},
+                "error": str(e)
+            }
     
     async def detect_video(
         self,
