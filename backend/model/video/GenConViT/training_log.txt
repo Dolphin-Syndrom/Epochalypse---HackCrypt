@@ -1,0 +1,21 @@
+/home/aniketgiri/.local/lib/python3.14/site-packages/torch/functional.py:505: UserWarning: torch.meshgrid: in an upcoming release, it will be required to pass the indexing argument. (Triggered internally at /pytorch/aten/src/ATen/native/TensorShape.cpp:4317.)
+  return _VF.meshgrid(tensors, **kwargs)  # type: ignore[attr-defined]
+Loading data...
+Done.
+Train Epoch: 0 [0/54 (0%)]	Loss: 0.714370
+Train Epoch: 0 [40/54 (71%)]	Loss: 0.655114
+
+Train set: Average loss: 0.1660, Accuracy: 35/54 (65%)
+
+Valid Epoch: 0 [0/56 (0%)]	Loss: 0.314809
+Valid Epoch: 0 [40/56 (71%)]	Loss: 1.201298
+Valid Set: Average loss: 0.1783, Accuracy: 34/56 (61%)
+
+Training complete in 0m 10s
+
+Saving model...
+
+Done.
+
+
+--- 12.67614818900256 seconds ---
