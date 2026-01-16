@@ -10,13 +10,18 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# Install system dependencies
+# Install system dependencies (including cmake and build tools for dlib)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1 \
     libglib2.0-0 \
     libsm6 \
     libxext6 \
     libxrender1 \
+    cmake \
+    build-essential \
+    libopenblas-dev \
+    liblapack-dev \
+    libx11-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching
