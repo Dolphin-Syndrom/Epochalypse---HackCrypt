@@ -1,0 +1,2 @@
+# API Routes Package
+from api.routes import detection, health, auth
