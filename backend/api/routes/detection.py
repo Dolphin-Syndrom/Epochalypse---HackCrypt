@@ -29,6 +29,8 @@ async def detect_image(
     Returns:
         Detection result with confidence scores
     """
+    from api.services.model_manager import model_manager
+    
     # Validate file type
     allowed_types = ["image/jpeg", "image/png", "image/webp"]
     if file.content_type not in allowed_types:
@@ -37,24 +39,45 @@ async def detect_image(
             detail=f"Invalid file type. Allowed: {allowed_types}"
         )
     
-    # TODO: Implement actual detection logic
-    # 1. Read image bytes
-    # 2. Preprocess image
-    # 3. Run through ensemble detector
-    # 4. Return results
-    
-    return DetectionResponse(
-        is_fake=False,
-        confidence=0.95,
-        model_scores={
-            "image_detector": 0.92,
-            "ensemble": 0.95
-        },
-        metadata={
-            "filename": file.filename,
-            "content_type": file.content_type
-        }
-    )
+    try:
+        # Read image bytes
+        image_bytes = await file.read()
+        
+        # Run detection through model manager
+        result = await model_manager.detect_image(
+            image_bytes=image_bytes,
+            use_ensemble=True
+        )
+        
+        # Check for errors
+        if "error" in result and result["error"]:
+            return DetectionResponse(
+                is_fake=False,
+                confidence=0.0,
+                model_scores={},
+                metadata={
+                    "filename": file.filename,
+                    "error": result["error"]
+                }
+            )
+        
+        return DetectionResponse(
+            is_fake=result.get("is_fake", False),
+            confidence=result.get("confidence", 0.0),
+            model_scores=result.get("model_scores", {}),
+            heatmap_base64=result.get("heatmap_base64"),
+            metadata={
+                "filename": file.filename,
+                "content_type": file.content_type,
+                "detailed_predictions": result.get("detailed_predictions", [])
+            }
+        )
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Detection failed: {str(e)}"
+        )
 
 
 @router.post("/detect/video", response_model=DetectionResponse)
@@ -74,6 +97,8 @@ async def detect_video(
     Returns:
         Detection result with frame-level analysis
     """
+    from api.services.model_manager import model_manager
+    
     allowed_types = ["video/mp4", "video/avi", "video/quicktime", "video/x-msvideo"]
     if file.content_type not in allowed_types:
         raise HTTPException(
@@ -81,26 +106,46 @@ async def detect_video(
             detail=f"Invalid file type. Allowed: {allowed_types}"
         )
     
-    # TODO: Implement video detection
-    # 1. Extract frames at sample_rate
-    # 2. Detect faces in frames
-    # 3. Run detection on each face
-    # 4. Aggregate results
-    
-    return DetectionResponse(
-        is_fake=False,
-        confidence=0.88,
-        model_scores={
-            "video_detector": 0.85,
-            "temporal_analysis": 0.90,
-            "ensemble": 0.88
-        },
-        metadata={
-            "filename": file.filename,
-            "frames_analyzed": 30,
-            "sample_rate": sample_rate
-        }
-    )
+    try:
+        # Read video bytes
+        video_bytes = await file.read()
+        
+        # Run detection through model manager
+        result = await model_manager.detect_video(
+            video_bytes=video_bytes,
+            sample_rate=sample_rate
+        )
+        
+        # Check for errors
+        if "error" in result and result["error"]:
+            return DetectionResponse(
+                is_fake=False,
+                confidence=0.0,
+                model_scores={},
+                metadata={
+                    "filename": file.filename,
+                    "error": result["error"]
+                }
+            )
+        
+        return DetectionResponse(
+            is_fake=result.get("is_fake", False),
+            confidence=result.get("confidence", 0.0),
+            model_scores=result.get("model_scores", {}),
+            metadata={
+                "filename": file.filename,
+                "content_type": file.content_type,
+                "frames_analyzed": result.get("frames_analyzed", 0),
+                "video_info": result.get("video_info", {}),
+                "temporal_analysis": result.get("temporal_analysis", {})
+            }
+        )
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Video detection failed: {str(e)}"
+        )
 
 
 @router.post("/detect/batch", response_model=BatchDetectionResponse)

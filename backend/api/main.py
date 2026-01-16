@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from api.routes import detection, health, auth
+from api.routes import detection, health, auth, ai_detection
 from api.core.config import settings
 
 
@@ -14,8 +14,28 @@ async def lifespan(app: FastAPI):
     """Application lifespan events."""
     # Startup
     print("🚀 MacroBlank API starting up...")
-    # TODO: Load models here
+    
+    # Register and load EfficientNet detector (with heatmap support)
+    try:
+        from pathlib import Path
+        from api.services.model_manager import model_manager
+        from api.services.efficientnet_detector import EfficientNetDetector
+        
+        # Create and register EfficientNet detector
+        efficientnet_detector = EfficientNetDetector(device="cpu")
+        model_manager.register_detector(efficientnet_detector)
+        
+        # Load the detector
+        efficientnet_detector.load_model()
+        print("✅ EfficientNet Detector loaded successfully")
+        
+    except Exception as e:
+        print(f"⚠️ Failed to load EfficientNet detector: {e}")
+        import traceback
+        traceback.print_exc()
+    
     yield
+    
     # Shutdown
     print("👋 MacroBlank API shutting down...")
 
@@ -40,6 +60,7 @@ app.add_middleware(
 app.include_router(health.router, tags=["Health"])
 app.include_router(detection.router, prefix="/api/v1", tags=["Detection"])
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["Authentication"])
+app.include_router(ai_detection.router, prefix="/api/v1", tags=["AI Content Detection"])
 
 
 @app.get("/")

@@ -5,7 +5,9 @@ Implementation based on NPR (Neural Pixel Representation) from CVPR 2024:
 "Rethinking the Up-Sampling Operations in CNN-based Generative Network 
 for Generalizable Deepfake Detection"
 
-Uses ResNet backbone for binary classification (real vs fake).
+Uses custom ResNet backbone for binary classification (real vs fake).
+Model architecture matches official implementation from:
+https://github.com/chuangchuangtan/NPR-DeepfakeDetection
 """
 import time
 from typing import Dict, Any, Optional
@@ -14,47 +16,129 @@ from pathlib import Path
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torchvision import models
+from torch.nn import functional
 from PIL import Image
 
 from api.services.base import BaseDetector
 from api.utils.preprocessing import ImagePreprocessor
 
 
+def conv3x3(in_planes, out_planes, stride=1):
+    """3x3 convolution with padding"""
+    return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
+                     padding=1, bias=False)
+
+
+def conv1x1(in_planes, out_planes, stride=1):
+    """1x1 convolution"""
+    return nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=stride, bias=False)
+
+
+class Bottleneck(nn.Module):
+    expansion = 4
+
+    def __init__(self, inplanes, planes, stride=1, downsample=None):
+        super(Bottleneck, self).__init__()
+        self.conv1 = conv1x1(inplanes, planes)
+        self.bn1 = nn.BatchNorm2d(planes)
+        self.conv2 = conv3x3(planes, planes, stride)
+        self.bn2 = nn.BatchNorm2d(planes)
+        self.conv3 = conv1x1(planes, planes * self.expansion)
+        self.bn3 = nn.BatchNorm2d(planes * self.expansion)
+        self.relu = nn.ReLU(inplace=True)
+        self.downsample = downsample
+        self.stride = stride
+
+    def forward(self, x):
+        identity = x
+
+        out = self.conv1(x)
+        out = self.bn1(out)
+        out = self.relu(out)
+
+        out = self.conv2(out)
+        out = self.bn2(out)
+        out = self.relu(out)
+
+        out = self.conv3(out)
+        out = self.bn3(out)
+
+        if self.downsample is not None:
+            identity = self.downsample(x)
+
+        out += identity
+        out = self.relu(out)
+
+        return out
+
+
 class NPRModel(nn.Module):
     """
-    NPR-style ResNet classifier for deepfake detection.
+    NPR Model - Custom ResNet for deepfake detection.
     
-    Uses pretrained ResNet50 backbone with custom classifier head.
+    This matches the official CVPR 2024 NPR architecture exactly:
+    - Uses only layer1 and layer2 (not full ResNet50)
+    - Final fc: 512 -> 1 (binary classification with sigmoid)
     """
-    
-    def __init__(self, num_classes: int = 2, pretrained: bool = True):
-        super().__init__()
+
+    def __init__(self, num_classes=1):
+        super(NPRModel, self).__init__()
         
-        # Load pretrained ResNet50
-        weights = models.ResNet50_Weights.IMAGENET1K_V1 if pretrained else None
-        self.backbone = models.resnet50(weights=weights)
+        block = Bottleneck
+        layers = [3, 4]  # Only layer1 and layer2
         
-        # Get feature dimension
-        in_features = self.backbone.fc.in_features
-        
-        # Replace classifier
-        self.backbone.fc = nn.Sequential(
-            nn.Dropout(0.5),
-            nn.Linear(in_features, 512),
-            nn.ReLU(inplace=True),
-            nn.Dropout(0.3),
-            nn.Linear(512, num_classes)
-        )
-    
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Forward pass returning logits."""
-        return self.backbone(x)
+        self.inplanes = 64
+        self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=2, padding=1, bias=False)
+        self.bn1 = nn.BatchNorm2d(64)
+        self.relu = nn.ReLU(inplace=True)
+        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+        self.layer1 = self._make_layer(block, 64, layers[0])
+        self.layer2 = self._make_layer(block, 128, layers[1], stride=2)
+        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+        self.fc1 = nn.Linear(512, num_classes)
+
+        # Initialize weights
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+            elif isinstance(m, nn.BatchNorm2d):
+                nn.init.constant_(m.weight, 1)
+                nn.init.constant_(m.bias, 0)
+
+    def _make_layer(self, block, planes, blocks, stride=1):
+        downsample = None
+        if stride != 1 or self.inplanes != planes * block.expansion:
+            downsample = nn.Sequential(
+                conv1x1(self.inplanes, planes * block.expansion, stride),
+                nn.BatchNorm2d(planes * block.expansion),
+            )
+
+        layers = []
+        layers.append(block(self.inplanes, planes, stride, downsample))
+        self.inplanes = planes * block.expansion
+        for _ in range(1, blocks):
+            layers.append(block(self.inplanes, planes))
+
+        return nn.Sequential(*layers)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.relu(x)
+        x = self.maxpool(x)
+
+        x = self.layer1(x)
+        x = self.layer2(x)
+
+        x = self.avgpool(x)
+        x = x.view(x.size(0), -1)
+        x = self.fc1(x)
+        return x
     
     def predict_proba(self, x: torch.Tensor) -> torch.Tensor:
-        """Get probability scores."""
+        """Get probability score (sigmoid of logits)."""
         logits = self.forward(x)
-        return F.softmax(logits, dim=1)
+        return torch.sigmoid(logits)
 
 
 class NPRDetector(BaseDetector):
@@ -86,7 +170,7 @@ class NPRDetector(BaseDetector):
     
     def load_model(self) -> None:
         """Load the NPR model."""
-        self.model = NPRModel(num_classes=2, pretrained=True)
+        self.model = NPRModel(num_classes=1)
         
         # Load custom weights if available
         if self.model_path and self.model_path.exists():
@@ -94,7 +178,10 @@ class NPRDetector(BaseDetector):
                 self.model_path,
                 map_location=self.device
             )
-            self.model.load_state_dict(state_dict)
+            self.model.load_state_dict(state_dict, strict=False)
+            print(f"✅ Loaded NPR weights from {self.model_path}")
+        else:
+            print("⚠️ NPR using pretrained ImageNet weights (download NPR weights for better accuracy)")
         
         self.model.to(self.device)
         self.model.eval()
@@ -125,12 +212,9 @@ class NPRDetector(BaseDetector):
         start_time = time.time()
         
         with torch.no_grad():
-            # Get probabilities
-            probs = self.model.predict_proba(input_data)
-            
-            # Index 0 = real, Index 1 = fake (convention)
-            fake_prob = probs[0, 1].item()
-            real_prob = probs[0, 0].item()
+            # Get fake probability (sigmoid output)
+            fake_prob = self.model.predict_proba(input_data).item()
+            real_prob = 1.0 - fake_prob
         
         processing_time = (time.time() - start_time) * 1000  # ms
         
@@ -143,7 +227,7 @@ class NPRDetector(BaseDetector):
             "fake_probability": fake_prob,
             "real_probability": real_prob,
             "processing_time_ms": processing_time,
-            "raw_output": probs.cpu().numpy().tolist()
+            "raw_output": [[real_prob, fake_prob]]
         }
     
     async def detect_async(

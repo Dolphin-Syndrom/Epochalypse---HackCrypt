@@ -32,10 +32,8 @@ env
 htmlcov
 .tox
 
-# Models (download separately)
-models/*.pth
-models/*.pt
-models/*.onnx
+# Models - keep weights, ignore training checkpoints
+# model/video/GenConViT/weight/*.pkl
 
 # Misc
 *.log

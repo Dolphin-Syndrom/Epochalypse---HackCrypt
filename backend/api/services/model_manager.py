@@ -178,11 +178,23 @@ class ModelManager:
             # Final prediction
             is_fake = fake_votes > total_votes / 2 if total_votes > 0 else False
             
+            # Get heatmap from first detector that has one
+            heatmap_base64 = None
+            for name, detector in self._detectors.items():
+                try:
+                    result = detector.detect(image)
+                    if result.get("heatmap_base64"):
+                        heatmap_base64 = result["heatmap_base64"]
+                        break
+                except:
+                    pass
+            
             return {
                 "is_fake": is_fake,
                 "confidence": avg_confidence,
                 "model_scores": model_scores,
-                "detailed_predictions": all_predictions
+                "detailed_predictions": all_predictions,
+                "heatmap_base64": heatmap_base64
             }
             
         except Exception as e:

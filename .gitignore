@@ -176,3 +176,9 @@ temp/
 # ========================
 .agents/
 .github/
+
+# ========================
+# GCP Credentials
+# ========================
+backend/config/gcp-key.json
+**/gcp-key.json
