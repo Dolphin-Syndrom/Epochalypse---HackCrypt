@@ -1,0 +1,44 @@
+# MacroBlank - Adversarial Deepfake Detection Platform
+# Docker Compose configuration following DeepSafe's microservices pattern
+
+version: '3.8'
+
+services:
+  # Backend API Service
+  api:
+    build: ./backend
+    container_name: macroblank-api
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - DEBUG=false
+      - MODEL_PATH=/app/models
+    volumes:
+      - ./backend/models:/app/models:ro
+    networks:
+      - macroblank-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Frontend Service (placeholder for future)
+  # frontend:
+  #   build: ./frontend
+  #   container_name: macroblank-frontend
+  #   ports:
+  #     - "80:80"
+  #   restart: unless-stopped
+  #   depends_on:
+  #     - api
+  #   networks:
+  #     - macroblank-network
+
+networks:
+  macroblank-network:
+    driver: bridge
