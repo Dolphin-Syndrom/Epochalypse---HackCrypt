@@ -1,0 +1,1 @@
+{"video": {"name": ["one.mp4", "sample.mp4", "twp.mp4"], "pred": [0.5, 0.7668095827102661, 0.4153832197189331], "klass": ["uncategorized", "uncategorized", "uncategorized"], "pred_label": ["FAKE", "FAKE", "REAL"], "correct_label": ["unknown", "unknown", "unknown"]}}
