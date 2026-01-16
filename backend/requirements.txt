@@ -16,7 +16,6 @@ aiofiles>=23.2.0
 pytest>=7.4.0
 pytest-asyncio>=0.21.0
 httpx>=0.25.0
-<<<<<<< Updated upstream
 google-cloud-aiplatform>=1.38.0
 
 # EfficientNet + Grad-CAM for image deepfake detection
@@ -31,13 +30,9 @@ decord>=0.6.0
 timm==0.6.5
 tqdm>=4.65.0
 PyYAML>=6.0
-=======
-torch
+
 transformers
 librosa
 soundfile
-timm
-opencv-python
-pillow
 facenet-pytorch
->>>>>>> Stashed changes
+
