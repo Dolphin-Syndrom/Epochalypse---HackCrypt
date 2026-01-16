@@ -200,7 +200,7 @@ class ModelManager:
         sample_rate: int = 10,
     ) -> Dict[str, Any]:
         """
-        Run detection on a video.
+        Run detection on a video using GenConViT and temporal analysis.
         
         Args:
             video_bytes: Raw video bytes
@@ -209,14 +209,83 @@ class ModelManager:
         Returns:
             Aggregated detection results with frame analysis
         """
-        # TODO: Implement in Commit 3
-        return {
-            "is_fake": False,
-            "confidence": 0.0,
-            "model_scores": {},
-            "frames_analyzed": 0,
-            "error": "Video detection not yet implemented"
-        }
+        from api.utils.video import VideoProcessor
+        from api.services.genconvit_detector import GenConViTDetector
+        from api.services.temporal import TemporalAnalyzer
+        
+        try:
+            # Initialize components
+            video_processor = VideoProcessor(sample_rate=sample_rate)
+            genconvit = GenConViTDetector(device=self._default_device)
+            temporal_analyzer = TemporalAnalyzer()
+            
+            # Extract frames
+            frames, video_info = video_processor.extract_frames(
+                video_bytes,
+                sample_rate=sample_rate,
+                max_frames=30
+            )
+            
+            if not frames:
+                return {
+                    "is_fake": False,
+                    "confidence": 0.0,
+                    "error": "No frames extracted from video",
+                    "video_info": video_info
+                }
+            
+            # Run GenConViT detection on video frames
+            genconvit_result = genconvit.detect_video(frames)
+            
+            # Also run per-frame analysis for temporal consistency
+            per_frame_predictions = []
+            npr_detector = self.get_detector("npr_detector")
+            
+            if npr_detector:
+                for i, frame in enumerate(frames[:10]):  # Limit to first 10 for speed
+                    try:
+                        result = npr_detector.detect(frame)
+                        per_frame_predictions.append({
+                            "frame_index": i,
+                            "is_fake": result.get("is_fake", False),
+                            "fake_probability": result.get("fake_probability", 0.5),
+                            "confidence": result.get("confidence", 0.5)
+                        })
+                    except Exception as e:
+                        logger.warning(f"Frame {i} detection failed: {e}")
+            
+            # Temporal analysis
+            temporal_result = temporal_analyzer.analyze_frame_predictions(per_frame_predictions)
+            
+            # Combine GenConViT and temporal analysis
+            final_confidence = (
+                genconvit_result.get("confidence", 0.5) * 0.7 +
+                temporal_result.get("mean_confidence", 0.5) * 0.3
+            )
+            
+            return {
+                "is_fake": genconvit_result.get("is_fake", False),
+                "confidence": final_confidence,
+                "model_scores": {
+                    "genconvit": genconvit_result.get("confidence", 0.0),
+                    "temporal_consistency": temporal_result.get("consistency_score", 1.0)
+                },
+                "genconvit_result": genconvit_result,
+                "temporal_analysis": temporal_result,
+                "video_info": video_info,
+                "frames_analyzed": len(frames),
+                "per_frame_predictions": per_frame_predictions[:5]  # First 5 only
+            }
+            
+        except Exception as e:
+            logger.error(f"Video detection failed: {e}")
+            return {
+                "is_fake": False,
+                "confidence": 0.0,
+                "model_scores": {},
+                "frames_analyzed": 0,
+                "error": str(e)
+            }
 
 
 # Global instance
