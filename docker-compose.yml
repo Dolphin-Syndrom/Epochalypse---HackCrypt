@@ -16,8 +16,13 @@ services:
       - PORT=8000
       - DEBUG=false
       - MODEL_PATH=/app/models
+      # Vertex AI / GCP Settings
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/gcp-key.json
+      - VERTEX_AI_LOCATION=us-central1
     volumes:
       - ./backend/models:/app/models:ro
+      # Mount GCP credentials
+      - ./backend/config/gcp-key.json:/app/credentials/gcp-key.json:ro
     networks:
       - macroblank-network
     healthcheck:
