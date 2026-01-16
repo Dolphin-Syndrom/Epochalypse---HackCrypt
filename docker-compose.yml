@@ -18,9 +18,9 @@ services:
       - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/gcp-key.json
       - VERTEX_AI_LOCATION=us-central1
     volumes:
-      - ./backend/model:/app/model:ro
+      - ./backend/model:/app/model:z
       # Mount GCP credentials (optional)
-      - ./backend/config/gcp-key.json:/app/credentials/gcp-key.json:ro
+      - ./backend/config/gcp-key.json:/app/credentials/gcp-key.json:z
     networks:
       - macroblank-network
     healthcheck:

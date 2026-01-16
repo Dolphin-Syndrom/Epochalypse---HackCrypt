@@ -21,12 +21,13 @@ from PIL import Image
 # Local: relative to this file
 if os.path.exists("/app/model/video/GenConViT"):
     GENCONVIT_PATH = Path("/app/model/video/GenConViT")
+    IN_DOCKER = True
 else:
     GENCONVIT_PATH = Path(__file__).parent.parent.parent / "model" / "video" / "GenConViT"
+    IN_DOCKER = False
 
-# Remove any conflicting 'model' paths and add GenConViT at the front
-sys.path = [p for p in sys.path if 'model' not in p or 'GenConViT' in p]
-sys.path.insert(0, str(GENCONVIT_PATH))
+# Store original sys.path to restore later
+_original_sys_path = sys.path.copy()
 
 # Store original working directory
 _original_cwd = os.getcwd()
@@ -77,7 +78,23 @@ class GenConViTService:
         # Change to GenConViT directory for proper weight loading
         os.chdir(self._genconvit_path)
         
+        # Temporarily modify sys.path to prioritize GenConViT's model package
+        # This is critical in Docker where /app/model conflicts with GenConViT/model
+        original_path = sys.path.copy()
+        
+        # Remove /app from path to avoid conflict with mounted model directory
+        if IN_DOCKER:
+            sys.path = [p for p in sys.path if p != '/app' and not p.startswith('/app/model')]
+        
+        # Add GenConViT path at the very front
+        sys.path.insert(0, str(self._genconvit_path))
+        
         try:
+            # Clear any cached 'model' module to force reimport from GenConViT
+            modules_to_remove = [m for m in sys.modules if m == 'model' or m.startswith('model.')]
+            for m in modules_to_remove:
+                del sys.modules[m]
+            
             from model.config import load_config
             from model.pred_func import load_genconvit
             
@@ -93,6 +110,8 @@ class GenConViTService:
             print(f"✅ GenConViT ({self.net}) loaded on {self.device}")
             
         finally:
+            # Restore original sys.path
+            sys.path = original_path
             os.chdir(_original_cwd)
     
     def unload_model(self) -> None:
@@ -126,6 +145,12 @@ class GenConViTService:
         
         # Change to GenConViT directory for imports
         os.chdir(self._genconvit_path)
+        
+        # Temporarily modify sys.path for GenConViT imports
+        original_path = sys.path.copy()
+        if IN_DOCKER:
+            sys.path = [p for p in sys.path if p != '/app' and not p.startswith('/app/model')]
+        sys.path.insert(0, str(self._genconvit_path))
         
         try:
             from model.pred_func import (
@@ -177,6 +202,7 @@ class GenConViTService:
             }
             
         finally:
+            sys.path = original_path
             os.chdir(_original_cwd)
     
     def detect_video_bytes(
