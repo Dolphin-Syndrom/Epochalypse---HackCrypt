@@ -71,6 +71,10 @@ class DetectionResponse(BaseModel):
         default=None,
         description="Detailed per-model predictions"
     )
+    heatmap_base64: Optional[str] = Field(
+        default=None,
+        description="Base64 encoded PNG heatmap showing manipulated regions"
+    )
     metadata: Dict[str, Any] = Field(
         default_factory=dict,
         description="Additional metadata about the analysis"

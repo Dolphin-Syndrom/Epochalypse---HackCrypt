@@ -14,8 +14,28 @@ async def lifespan(app: FastAPI):
     """Application lifespan events."""
     # Startup
     print("🚀 MacroBlank API starting up...")
-    # TODO: Load models here
+    
+    # Register and load EfficientNet detector (with heatmap support)
+    try:
+        from pathlib import Path
+        from api.services.model_manager import model_manager
+        from api.services.efficientnet_detector import EfficientNetDetector
+        
+        # Create and register EfficientNet detector
+        efficientnet_detector = EfficientNetDetector(device="cpu")
+        model_manager.register_detector(efficientnet_detector)
+        
+        # Load the detector
+        efficientnet_detector.load_model()
+        print("✅ EfficientNet Detector loaded successfully")
+        
+    except Exception as e:
+        print(f"⚠️ Failed to load EfficientNet detector: {e}")
+        import traceback
+        traceback.print_exc()
+    
     yield
+    
     # Shutdown
     print("👋 MacroBlank API shutting down...")
 
