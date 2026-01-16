@@ -1,7 +1,7 @@
 """
 Detection Routes - Image and Video Deepfake Detection Endpoints
 """
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, UploadFile, File, HTTPException, Query
 from typing import Optional
 
 from api.schemas.detection import (
@@ -10,6 +10,7 @@ from api.schemas.detection import (
     BatchDetectionResponse,
     BatchResultItem,
 )
+from api.services.genconvit_service import get_genconvit_service
 
 router = APIRouter()
 
@@ -37,11 +38,8 @@ async def detect_image(
             detail=f"Invalid file type. Allowed: {allowed_types}"
         )
     
-    # TODO: Implement actual detection logic
-    # 1. Read image bytes
-    # 2. Preprocess image
-    # 3. Run through ensemble detector
-    # 4. Return results
+    # TODO: Implement actual detection logic for images
+    # For now, return placeholder
     
     return DetectionResponse(
         is_fake=False,
@@ -60,47 +58,67 @@ async def detect_image(
 @router.post("/detect/video", response_model=DetectionResponse)
 async def detect_video(
     file: UploadFile = File(...),
-    sample_rate: Optional[int] = 10,
-    confidence_threshold: Optional[float] = 0.5
+    num_frames: Optional[int] = Query(15, ge=5, le=60, description="Number of frames to analyze"),
+    model: Optional[str] = Query("ed", description="Model variant: ed, vae, or genconvit")
 ):
     """
-    Analyze a video for deepfake manipulation.
+    Analyze a video for deepfake manipulation using GenConViT.
     
     Args:
         file: Video file (MP4, AVI, MOV)
-        sample_rate: Analyze every Nth frame
-        confidence_threshold: Minimum confidence for detection
+        num_frames: Number of frames to extract and analyze (5-60)
+        model: Model variant to use (ed=faster, vae, genconvit=both)
     
     Returns:
-        Detection result with frame-level analysis
+        Detection result with confidence scores
     """
-    allowed_types = ["video/mp4", "video/avi", "video/quicktime", "video/x-msvideo"]
+    allowed_types = ["video/mp4", "video/avi", "video/quicktime", "video/x-msvideo", "video/x-matroska"]
     if file.content_type not in allowed_types:
         raise HTTPException(
             status_code=400,
             detail=f"Invalid file type. Allowed: {allowed_types}"
         )
     
-    # TODO: Implement video detection
-    # 1. Extract frames at sample_rate
-    # 2. Detect faces in frames
-    # 3. Run detection on each face
-    # 4. Aggregate results
+    if model not in ["ed", "vae", "genconvit"]:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid model. Allowed: ed, vae, genconvit"
+        )
     
-    return DetectionResponse(
-        is_fake=False,
-        confidence=0.88,
-        model_scores={
-            "video_detector": 0.85,
-            "temporal_analysis": 0.90,
-            "ensemble": 0.88
-        },
-        metadata={
-            "filename": file.filename,
-            "frames_analyzed": 30,
-            "sample_rate": sample_rate
-        }
-    )
+    try:
+        # Read video bytes
+        video_bytes = await file.read()
+        
+        # Get GenConViT service
+        service = get_genconvit_service(net=model, num_frames=num_frames)
+        
+        # Run detection
+        result = service.detect_video_bytes(
+            video_bytes=video_bytes,
+            filename=file.filename or "video.mp4",
+            num_frames=num_frames
+        )
+        
+        if "error" in result:
+            raise HTTPException(status_code=422, detail=result["error"])
+        
+        return DetectionResponse(
+            is_fake=result["is_fake"],
+            confidence=result["confidence"] / 100,  # Normalize to 0-1
+            model_scores={
+                result["model"]: result["raw_score"],
+            },
+            metadata={
+                "filename": file.filename,
+                "frames_analyzed": result["frames_analyzed"],
+                "processing_time_ms": result["processing_time_ms"],
+                "prediction": result["prediction"],
+                "model_variant": model
+            }
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Detection failed: {str(e)}")
 
 
 @router.post("/detect/batch", response_model=BatchDetectionResponse)

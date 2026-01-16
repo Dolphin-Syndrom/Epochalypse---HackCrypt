@@ -1,4 +1,6 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
   /* Google AI Studio-inspired Dark Theme */
@@ -13,16 +15,6 @@
   --success: #81C995; /* Muted Green */
   --warning: #FDD663;
   --error: #F28B82;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-sidebar: var(--sidebar-bg);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-card: var(--card-bg);
-  --color-primary: var(--primary);
-  --color-success: var(--success);
 }
 
 body {

@@ -1,9 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { Upload, FileVideo, FileAudio, FileImage, Sparkles } from 'lucide-react';
+import { Upload, FileVideo, FileAudio, FileImage, Sparkles, AlertTriangle } from 'lucide-react';
 import { clsx } from 'clsx';
 import Image from 'next/image';
+
+// API Base URL - change this to your backend URL
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
 
 interface AnalysisResult {
   accuracy: number;
@@ -13,6 +16,8 @@ interface AnalysisResult {
   precision: number;
   recall: number;
   class: string;
+  framesAnalyzed?: number;
+  processingTime?: number;
 }
 
 interface DetectorProps {
@@ -25,28 +30,87 @@ export default function Detector({ type, title }: DetectorProps) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [isAdvanced, setIsAdvanced] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     const droppedFile = e.dataTransfer.files[0];
-    if (droppedFile) setFile(droppedFile);
+    if (droppedFile) {
+      setFile(droppedFile);
+      setError(null);
+      setResult(null);
+    }
   };
 
-  const handleAnalyze = () => {
+  const handleAnalyze = async () => {
+    if (!file) return;
+    
     setIsAnalyzing(true);
-    // Simulate API call
-    setTimeout(() => {
+    setError(null);
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      // Determine endpoint based on type
+      let endpoint = '';
+      if (type === 'video') {
+        endpoint = `${API_BASE_URL}/api/v1/detect/video?num_frames=15&model=ed`;
+      } else if (type === 'image') {
+        endpoint = `${API_BASE_URL}/api/v1/detect/image`;
+      } else {
+        // For audio and text, use placeholder for now
+        setTimeout(() => {
+          setResult({
+            accuracy: 85.0,
+            gradCamUrl: 'https://placehold.co/600x400/1e1e20/FFF?text=Analysis+Complete',
+            explanation: `${type} detection is coming soon. This is a placeholder result.`,
+            f1: 0.85,
+            precision: 0.87,
+            recall: 0.83,
+            class: 'REAL'
+          });
+          setIsAnalyzing(false);
+        }, 1500);
+        return;
+      }
+      
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Detection failed');
+      }
+      
+      const data = await response.json();
+      
+      // Map API response to our result format
+      const isFake = data.is_fake;
+      const confidence = data.confidence * 100; // API returns 0-1, we need percentage
+      
       setResult({
-        accuracy: 98.5,
-        gradCamUrl: 'https://placehold.co/600x400/1e1e20/FFF?text=GradCAM+Overlay',
-        explanation: 'The model detected inconsistencies in the lighting patterns around the subject\'s face, suggesting a Deepfake synthesis. Specifically, the shadows on the left cheek do not match the background light source.',
+        accuracy: confidence,
+        gradCamUrl: 'https://placehold.co/600x400/1e1e20/FFF?text=GenConViT+Analysis',
+        explanation: isFake 
+          ? `The GenConViT model detected deepfake artifacts in this ${type}. The model analyzed ${data.metadata?.frames_analyzed || 'multiple'} frames and found manipulation patterns with ${confidence.toFixed(1)}% confidence.`
+          : `The GenConViT model found no significant deepfake indicators in this ${type}. Analysis of ${data.metadata?.frames_analyzed || 'multiple'} frames suggests this content is likely authentic.`,
         f1: 0.94,
         precision: 0.96,
         recall: 0.92,
-        class: 'FAKE'
+        class: isFake ? 'FAKE' : 'REAL',
+        framesAnalyzed: data.metadata?.frames_analyzed,
+        processingTime: data.metadata?.processing_time_ms
       });
+      
+    } catch (err) {
+      console.error('Detection error:', err);
+      setError(err instanceof Error ? err.message : 'Detection failed. Please try again.');
+    } finally {
       setIsAnalyzing(false);
-    }, 2000);
+    }
   };
 
   const renderIcon = () => {
@@ -57,6 +121,7 @@ export default function Detector({ type, title }: DetectorProps) {
       default: return <Sparkles className="w-12 h-12 text-gray-400" />;
     }
   };
+
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -143,6 +208,14 @@ export default function Detector({ type, title }: DetectorProps) {
 
         {/* Results Section */}
         <div className="lg:col-span-2 space-y-6">
+            {/* Error Display */}
+            {error && (
+                <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-4 flex items-center gap-3">
+                    <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0" />
+                    <p className="text-red-400 text-sm">{error}</p>
+                </div>
+            )}
+            
             {!result ? (
                 <div className="h-full bg-[var(--card-bg)] border border-[var(--sidebar-border)] rounded-lg flex flex-col items-center justify-center text-gray-500 p-12 text-center min-h-[400px]">
                     <Sparkles className="w-12 h-12 mb-4 opacity-20" />
@@ -160,9 +233,17 @@ export default function Detector({ type, title }: DetectorProps) {
                         </div>
                         <div className="bg-[var(--card-bg)] border border-[var(--sidebar-border)] p-4 rounded-lg flex flex-col items-center justify-center h-24">
                              <span className="text-xs text-gray-400 uppercase tracking-widest mb-1">Confidence</span>
-                             <span className="text-2xl font-bold text-white">{result.accuracy}%</span>
+                             <span className="text-2xl font-bold text-white">{result.accuracy.toFixed(1)}%</span>
                         </div>
                     </div>
+
+                    {/* Processing Info */}
+                    {(result.framesAnalyzed || result.processingTime) && (
+                        <div className="flex gap-4 text-xs text-gray-500">
+                            {result.framesAnalyzed && <span>Frames analyzed: {result.framesAnalyzed}</span>}
+                            {result.processingTime && <span>Processing time: {result.processingTime.toFixed(0)}ms</span>}
+                        </div>
+                    )}
 
                     {/* Main Visualization (GradCAM) */}
                     <div className="bg-[var(--card-bg)] border border-[var(--sidebar-border)] rounded-lg p-1 overflow-hidden relative min-h-[300px] flex items-center justify-center bg-black">
@@ -176,7 +257,7 @@ export default function Detector({ type, title }: DetectorProps) {
                           unoptimized
                         />
                         <div className="absolute top-4 left-4 bg-black/70 backdrop-blur-sm px-3 py-1 rounded text-xs text-white border border-gray-700">
-                            Grad-CAM Visualization
+                            GenConViT Analysis
                         </div>
                     </div>
 

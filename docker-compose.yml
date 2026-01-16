@@ -1,27 +1,25 @@
 # MacroBlank - Adversarial Deepfake Detection Platform
 # Docker Compose configuration following DeepSafe's microservices pattern
 
-version: '3.8'
-
 services:
   # Backend API Service
   api:
     build: ./backend
     container_name: macroblank-api
     ports:
-      - "8000:8000"
+      - "8002:8000"
     restart: unless-stopped
     environment:
       - HOST=0.0.0.0
       - PORT=8000
       - DEBUG=false
-      - MODEL_PATH=/app/models
-      # Vertex AI / GCP Settings
+      - MODEL_PATH=/app/model
+      # Vertex AI / GCP Settings (optional)
       - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/gcp-key.json
       - VERTEX_AI_LOCATION=us-central1
     volumes:
-      - ./backend/models:/app/models:ro
-      # Mount GCP credentials
+      - ./backend/model:/app/model:ro
+      # Mount GCP credentials (optional)
       - ./backend/config/gcp-key.json:/app/credentials/gcp-key.json:ro
     networks:
       - macroblank-network
