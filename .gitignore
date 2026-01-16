@@ -1,0 +1,178 @@
+# ========================
+# Python
+# ========================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv/
+.env/
+
+# ========================
+# Environment Variables
+# ========================
+.env
+.env.local
+.env.*.local
+*.env
+secrets.json
+config.local.json
+
+# ========================
+# IDE & Editors
+# ========================
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+*.sublime-workspace
+*.sublime-project
+
+# ========================
+# OS Generated Files
+# ========================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ========================
+# Jupyter Notebooks
+# ========================
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# ========================
+# Machine Learning / Data Science
+# ========================
+*.h5
+*.hdf5
+*.pkl
+*.pickle
+*.joblib
+*.model
+*.weights
+*.ckpt
+*.ckpt.*
+checkpoint/
+checkpoints/
+saved_models/
+models/
+*.pt
+*.pth
+*.onnx
+*.safetensors
+
+# Large datasets
+data/
+datasets/
+*.csv
+*.tsv
+*.parquet
+!sample_*.csv
+
+# Logs and outputs
+logs/
+*.log
+output/
+outputs/
+results/
+runs/
+wandb/
+mlruns/
+
+# ========================
+# Node.js (if applicable)
+# ========================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn/
+package-lock.json
+yarn.lock
+
+# ========================
+# Docker
+# ========================
+*.tar
+docker-compose.override.yml
+
+# ========================
+# Testing & Coverage
+# ========================
+.coverage
+.tox/
+.nox/
+htmlcov/
+.cache/
+.pytest_cache/
+pytest_cache/
+coverage.xml
+*.cover
+.hypothesis/
+
+# ========================
+# Build Artifacts
+# ========================
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+
+# ========================
+# Temporary Files
+# ========================
+tmp/
+temp/
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# ========================
+# Miscellaneous
+# ========================
+.cache/
+*.pid
+*.seed
+*.pid.lock
+
+# ========================
+# AI Agents & GitHub Config
+# ========================
+.agents/
+.github/
