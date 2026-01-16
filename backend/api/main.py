@@ -5,7 +5,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
+<<<<<<< Updated upstream
 from api.routes import detection, health, auth, ai_detection
+=======
+from api.routes import detection, health, auth, audio_detection
+>>>>>>> Stashed changes
 from api.core.config import settings
 
 
@@ -60,7 +64,11 @@ app.add_middleware(
 app.include_router(health.router, tags=["Health"])
 app.include_router(detection.router, prefix="/api/v1", tags=["Detection"])
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["Authentication"])
+<<<<<<< Updated upstream
 app.include_router(ai_detection.router, prefix="/api/v1", tags=["AI Content Detection"])
+=======
+app.include_router(audio_detection.router, prefix="/api/v1")
+>>>>>>> Stashed changes
 
 
 @app.get("/")
@@ -72,3 +80,9 @@ async def root():
         "status": "operational",
         "docs": "/docs"
     }
+
+
+if __name__ == "__main__":
+    import uvicorn
+    # Never assume the port: 8000 is default but configurable
+    uvicorn.run(app, host="0.0.0.0", port=8000)

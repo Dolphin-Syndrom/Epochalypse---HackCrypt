@@ -23,7 +23,10 @@ Epochalypse---HackCrypt/
 │   │   ├── services/         # Business logic and model interaction services
 │   │   ├── utils/            # Utility functions
 │   │   └── main.py           # Application entry point
-│   ├── models/               # ML Models directory (TensorFlow/PyTorch weights)
+│   ├── model/                # ML Models directory
+│   │   └── audio/            # Audio analysis models
+│   ├── ai-detector.html      # Standalone detector interface
+│   ├── ai_detector_backend.py # Standalone detector backend
 │   ├── Dockerfile            # Backend container definition
 │   └── requirements.txt      # Python dependencies
 │
@@ -42,6 +45,27 @@ Epochalypse---HackCrypt/
 ```
 
 ## Getting Started
+
+### Local Development Setup
+
+#### Backend (Python)
+
+1. Create a virtual environment in the root directory:
+   ```bash
+   python -m venv venv
+   ```
+2. Activate the virtual environment:
+   - Windows: `.\venv\Scripts\activate`
+   - Linux/Mac: `source venv/bin/activate`
+3. Install dependencies:
+   ```bash
+   pip install -r backend/requirements.txt
+   ```
+4. Run the backend locally:
+   ```bash
+   cd backend
+   uvicorn api.main:app --reload
+   ```
 
 ### Prerequisites
 - [Docker](https://www.docker.com/) & Docker Compose
