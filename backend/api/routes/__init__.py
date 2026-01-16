@@ -1,2 +1,2 @@
 # API Routes Package
-from api.routes import detection, health, auth
+from api.routes import detection, health, auth, ai_detection
