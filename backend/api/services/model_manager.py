@@ -126,17 +126,18 @@ class ModelManager:
         use_ensemble: bool = True,
     ) -> Dict[str, Any]:
         """
-        Run detection on an image using all or specific detectors.
+        Run detection on an image using ensemble of detectors.
         
-        Args:
-            image_bytes: Raw image bytes
-            use_ensemble: Whether to use all detectors
-            
-        Returns:
-            Aggregated detection results
+        Ensemble Strategy:
+        - Both agree FAKE → FAKE
+        - Only one says FAKE with high confidence (>0.8) → FAKE
+        - Only one says FAKE with low confidence → UNCERTAIN
+        - Both agree REAL → REAL
         """
         from io import BytesIO
         from PIL import Image
+        
+        HIGH_CONFIDENCE_THRESHOLD = 0.8
         
         if not self._detectors:
             return {
@@ -153,47 +154,72 @@ class ModelManager:
             # Collect results from all detectors
             model_scores = {}
             all_predictions = []
+            heatmap_base64 = None
             
             for name, detector in self._detectors.items():
                 try:
                     result = detector.detect(image)
-                    model_scores[name] = result.get("confidence", 0.0)
+                    fake_prob = result.get("fake_probability", 0.0)
+                    model_scores[name] = {
+                        "fake_probability": fake_prob,
+                        "is_fake": result.get("is_fake", False)
+                    }
                     all_predictions.append({
                         "name": name,
                         "is_fake": result.get("is_fake", False),
-                        "confidence": result.get("confidence", 0.0),
-                        "fake_probability": result.get("fake_probability", 0.0)
+                        "fake_probability": fake_prob
                     })
+                    # Get heatmap from first available
+                    if heatmap_base64 is None and result.get("heatmap_base64"):
+                        heatmap_base64 = result["heatmap_base64"]
                 except Exception as e:
                     logger.error(f"Detector {name} failed: {e}")
                     model_scores[name] = {"error": str(e)}
             
-            # Aggregate results (simple majority voting for now)
+            if not all_predictions:
+                return {"is_fake": False, "confidence": 0.0, "error": "All detectors failed"}
+            
             fake_votes = sum(1 for p in all_predictions if p["is_fake"])
             total_votes = len(all_predictions)
+            max_fake_prob = max(p["fake_probability"] for p in all_predictions)
+            avg_fake_prob = sum(p["fake_probability"] for p in all_predictions) / total_votes
             
-            # Average confidence
-            avg_confidence = sum(p["confidence"] for p in all_predictions) / total_votes if total_votes > 0 else 0.0
-            
-            # Final prediction
-            is_fake = fake_votes > total_votes / 2 if total_votes > 0 else False
-            
-            # Get heatmap from first detector that has one
-            heatmap_base64 = None
-            for name, detector in self._detectors.items():
-                try:
-                    result = detector.detect(image)
-                    if result.get("heatmap_base64"):
-                        heatmap_base64 = result["heatmap_base64"]
-                        break
-                except:
-                    pass
+            # Ensemble decision
+            if fake_votes == total_votes:
+                # All detectors agree it's fake
+                is_fake = True
+                status = "fake"
+                confidence = avg_fake_prob
+            elif fake_votes == 0:
+                # All detectors agree it's real
+                is_fake = False
+                status = "real"
+                confidence = 1.0 - avg_fake_prob
+            else:
+                # Disagrement - check if any has high confidence
+                if max_fake_prob >= HIGH_CONFIDENCE_THRESHOLD:
+                    is_fake = True
+                    status = "likely_fake"
+                    confidence = max_fake_prob
+                else:
+                    # Low confidence disagreement - mark as uncertain
+                    is_fake = False
+                    status = "uncertain"
+                    confidence = avg_fake_prob
             
             return {
                 "is_fake": is_fake,
-                "confidence": avg_confidence,
+                "status": status,  # "fake", "real", "likely_fake", "uncertain"
+                "confidence": confidence,
                 "model_scores": model_scores,
                 "detailed_predictions": all_predictions,
+                "ensemble_info": {
+                    "fake_votes": fake_votes,
+                    "total_votes": total_votes,
+                    "avg_fake_probability": avg_fake_prob,
+                    "max_fake_probability": max_fake_prob,
+                    "high_confidence_threshold": HIGH_CONFIDENCE_THRESHOLD
+                },
                 "heatmap_base64": heatmap_base64
             }
             

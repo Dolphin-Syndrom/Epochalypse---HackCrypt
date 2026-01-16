@@ -16,22 +16,30 @@ async def lifespan(app: FastAPI):
     # Startup
     print("🚀 MacroBlank API starting up...")
     
-    # Register and load EfficientNet detector (with heatmap support)
+    # Register and load detectors for ensemble detection
     try:
         from pathlib import Path
         from api.services.model_manager import model_manager
-        from api.services.efficientnet_detector import EfficientNetDetector
+        from api.services.universal_fake_detector import UniversalFakeDetector
+        from api.services.npr_detector import NPRDetector
         
-        # Create and register EfficientNet detector
-        efficientnet_detector = EfficientNetDetector(device="cpu")
-        model_manager.register_detector(efficientnet_detector)
+        # 1. Universal Fake Detector (CLIP-based, semantic features)
+        ufd = UniversalFakeDetector(device="cpu")
+        model_manager.register_detector(ufd)
+        ufd.load_model()
+        print("✅ Universal Fake Detector loaded")
         
-        # Load the detector
-        efficientnet_detector.load_model()
-        print("✅ EfficientNet Detector loaded successfully")
+        # 2. NPR Detector (ResNet-based, texture/frequency analysis)
+        npr_weights = Path(__file__).parent.parent / "models" / "NPR.pth"
+        npr = NPRDetector(model_path=npr_weights, device="cpu")
+        model_manager.register_detector(npr)
+        npr.load_model()
+        print("✅ NPR Detector loaded")
+        
+        print("🔗 Ensemble detection enabled (UFD + NPR)")
         
     except Exception as e:
-        print(f"⚠️ Failed to load EfficientNet detector: {e}")
+        print(f"⚠️ Failed to load detectors: {e}")
         import traceback
         traceback.print_exc()
     
