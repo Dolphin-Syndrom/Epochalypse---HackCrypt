@@ -601,7 +601,8 @@ export default function Detector({ type, title }: DetectorProps) {
           break;
 
         case 'image':
-          endpoint = `${API_BASE_URL}/api/v1/image/detect?variant=vae`;
+          // Use ensemble endpoint which returns heatmaps
+          endpoint = `${API_BASE_URL}/api/v1/detect/image`;
           requestBody = new FormData();
           requestBody.append('file', file!);
           break;
@@ -713,21 +714,23 @@ export default function Detector({ type, title }: DetectorProps) {
         }
 
         case 'image': {
-          const results = data.results;
-          const isFake = results.is_fake;
-          const confidence = results.confidence_percentage;
+          // Ensemble response format: is_fake, confidence, model_scores, heatmap_base64
+          const isFake = data.is_fake;
+          const confidence = data.confidence * 100;
+          const modelScores = data.model_scores || {};
 
           parsedResult = {
             accuracy: confidence,
             explanation: isFake
-              ? `ConvNeXt detected manipulation artifacts with ${confidence.toFixed(1)}% confidence. Face analysis reveals inconsistencies typical of synthetic generation.`
-              : `Image analysis complete with ${confidence.toFixed(1)}% confidence. No significant manipulation artifacts detected in facial regions.`,
+              ? `Ensemble analysis detected manipulation artifacts with ${confidence.toFixed(1)}% confidence. Multiple models (UFD + NPR) found inconsistencies typical of synthetic generation.`
+              : `Ensemble analysis complete with ${confidence.toFixed(1)}% confidence. No significant manipulation artifacts detected by UFD and NPR detectors.`,
             f1: 0.92, precision: 0.94, recall: 0.90,
             class: isFake ? 'FAKE' : 'REAL',
-            rawScore: results.probabilities?.fake || 0,
-            modelUsed: data.model || 'ConvNeXt-MTCNN',
-            probabilities: results.probabilities,
-            processingTime: data.processing_time_ms
+            rawScore: data.confidence,
+            modelUsed: 'UFD + NPR Ensemble',
+            probabilities: { real: 1 - data.confidence, fake: data.confidence },
+            heatmapBase64: data.heatmap_base64,
+            processingTime: data.metadata?.processing_time_ms
           };
           break;
         }
@@ -810,7 +813,7 @@ export default function Detector({ type, title }: DetectorProps) {
   const getModelInfo = () => {
     switch (type) {
       case 'video': return { name: 'GenConViT-ED', desc: 'Generalized Convolutional Vision Transformer' };
-      case 'image': return { name: 'ConvNeXt + MTCNN', desc: 'Face-focused deepfake detection' };
+      case 'image': return { name: 'UFD + NPR Ensemble', desc: 'Multi-model deepfake detection with heatmaps' };
       case 'audio': return { name: 'Wav2Vec2-AASIST', desc: 'Audio Anti-Spoofing System' };
       case 'ai-media': return { name: 'Vertex AI (Gemini 2.0)', desc: 'AI-Generated Media Detection' };
     }
