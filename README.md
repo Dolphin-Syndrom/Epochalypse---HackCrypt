@@ -103,7 +103,7 @@ This platform is built to address the **HackCrypt Deepfake Detection Challenge**
 
 ## 🏗️ Architecture
 
-![Platform Architecture](/home/aniketgiri/Aniket/deepfake/Epochalypse---HackCrypt/docs/architecture.jpeg)
+![Platform Architecture](docs/architecture.jpeg)
 
 ```
 
