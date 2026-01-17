@@ -76,7 +76,7 @@ class TemporalAnalyzer:
         
         # Check prediction consistency
         fake_ratio = sum(is_fake_list) / len(is_fake_list)
-        is_consistent = variance < self.consistency_threshold
+        is_consistent = bool(variance < self.consistency_threshold)
         
         # Temporal artifacts
         artifacts = []
