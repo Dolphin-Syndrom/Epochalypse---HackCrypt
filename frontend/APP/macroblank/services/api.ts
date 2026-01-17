@@ -6,7 +6,7 @@ export const API_ENDPOINTS = {
   video: `${API_BASE_URL}/api/v1/detect/video`,
   image: `${API_BASE_URL}/api/v1/image/detect`,
   audio: `${API_BASE_URL}/api/v1/audio/detect`,
-  aiGenerated: `${API_BASE_URL}/api/v1/detect/image`, // Uses EfficientNet for AI-generated detection
+  aiGenerated: `${API_BASE_URL}/api/v1/ai-detect`, // Uses Gemini 2.0 Flash for AI-generated detection
   health: `${API_BASE_URL}/api/v1/health`,
 };
 
@@ -18,6 +18,8 @@ export interface DetectionResult {
   confidence: number;
   model?: string;
   error?: string;
+  explanation?: string;
+  indicators?: string[];
 }
 
 // Helper to get mime type from file extension
@@ -49,7 +51,8 @@ export async function detectVideo(uri: string, filename: string, numFrames = 15)
       type: getMimeType(filename, 'video/mp4'),
     } as any);
 
-    const response = await fetch(`${API_ENDPOINTS.video}?num_frames=${numFrames}&model=ed`, {
+    const endpoint = process.env.EXPO_PUBLIC_VIDEO_API_URL || `${API_ENDPOINTS.video}?num_frames=${numFrames}&model=ed`;
+    const response = await fetch(endpoint, {
       method: 'POST',
       body: formData,
       headers: {
@@ -63,9 +66,19 @@ export async function detectVideo(uri: string, filename: string, numFrames = 15)
     }
 
     const data = await response.json();
-    const isFake = data.is_fake;
-    const rawScore = data.metadata?.raw_score ?? (data.confidence / 100);
-    const confidence = isFake ? rawScore * 100 : (1 - rawScore) * 100;
+    let isFake: boolean;
+    let confidence: number;
+
+    if (data.prediction !== undefined) {
+      // New Backend
+      isFake = data.prediction === 'FAKE';
+      confidence = data.score * 100;
+    } else {
+      // Old Backend
+      isFake = data.is_fake;
+      const rawScore = data.metadata?.raw_score ?? (data.confidence / 100);
+      confidence = isFake ? rawScore * 100 : (1 - rawScore) * 100;
+    }
 
     return {
       prediction: isFake ? 'FAKE' : 'REAL',
@@ -164,9 +177,6 @@ export async function detectAIGenerated(uri: string, filename: string): Promise<
     const response = await fetch(API_ENDPOINTS.aiGenerated, {
       method: 'POST',
       body: formData,
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
     });
 
     if (!response.ok) {
@@ -175,6 +185,23 @@ export async function detectAIGenerated(uri: string, filename: string): Promise<
     }
 
     const data = await response.json();
+
+    // Check for new response format
+    if (data.result) {
+      const result = data.result;
+      const isFake = result.verdict === 'AI_GENERATED';
+      const isUncertain = result.verdict === 'UNCERTAIN';
+
+      return {
+        prediction: isFake ? 'AI-GENERATED' : (isUncertain ? 'ERROR' : 'HUMAN'),
+        confidence: result.confidence,
+        model: 'Gemini 2.0 Flash',
+        explanation: result.explanation,
+        indicators: result.indicators
+      };
+    }
+
+    // Fallback for old format (if any)
     const isFake = data.is_fake;
     const confidence = data.confidence * 100;
 

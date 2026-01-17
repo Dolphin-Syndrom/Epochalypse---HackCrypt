@@ -1,3 +1,38 @@
+def predict_single_video(
+    video_path,
+    ed_weight='genconvit_ed_inference',
+    vae_weight=None,
+    num_frames=15,
+    net='ed',
+    fp16=False
+):
+    """
+    Predict a single video file and return the result.
+    """
+    result = set_result()
+    model = load_genconvit(config, net, ed_weight, vae_weight, fp16)
+    try:
+        is_vid_folder = is_video_folder(video_path)
+        if is_video(video_path) or is_vid_folder:
+            result, accuracy, count, pred = predict(
+                video_path,
+                model,
+                fp16,
+                result,
+                num_frames,
+                net,
+                "uncategorized",
+                0,
+                vid_folder=is_vid_folder
+            )
+            return {
+                "prediction": real_or_fake(pred[0]),
+                "score": float(pred[1])
+            }
+        else:
+            return {"error": "Invalid video file."}
+    except Exception as e:
+        return {"error": str(e)}
 import os
 import argparse
 import json

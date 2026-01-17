@@ -30,6 +30,8 @@ interface AnalysisResult {
   audioVerdict?: string;
   aiScore?: number;
   humanScore?: number;
+  indicators?: string[];
+  generatedBy?: string;
 }
 
 interface DetectorProps {
@@ -593,13 +595,19 @@ export default function Detector({ type, title }: DetectorProps) {
 
       switch (type) {
         case 'video':
-          endpoint = `${API_BASE_URL}/api/v1/detect/video?num_frames=15&model=ed`;
+          endpoint = process.env.NEXT_PUBLIC_VIDEO_API_URL || `${API_BASE_URL}/api/v1/detect/${type}?num_frames=15`;
           requestBody = new FormData();
           requestBody.append('file', file!);
           break;
 
         case 'image':
           endpoint = `${API_BASE_URL}/api/v1/image/detect?variant=vae`;
+          requestBody = new FormData();
+          requestBody.append('file', file!);
+          break;
+
+        case 'ai-media':
+          endpoint = `${API_BASE_URL}/api/v1/ai-detect`;
           requestBody = new FormData();
           requestBody.append('file', file!);
           break;
@@ -631,23 +639,75 @@ export default function Detector({ type, title }: DetectorProps) {
       let parsedResult: AnalysisResult;
 
       switch (type) {
+        case 'ai-media': {
+          if (!data.success) {
+            throw new Error(data.error || 'AI detection failed');
+          }
+          const result = data.result;
+
+          // Normalize verdict to standard classes
+          let verdictClass = 'REAL'; // Default
+          if (result.verdict?.includes('AI_GENERATED')) verdictClass = 'AI-GENERATED';
+          if (result.verdict?.includes('UNCERTAIN')) verdictClass = 'UNCERTAIN';
+          if (result.verdict?.includes('REAL')) verdictClass = 'REAL';
+
+          const isFake = verdictClass === 'AI-GENERATED';
+          const isUncertain = verdictClass === 'UNCERTAIN';
+          const confidence = result.confidence || 0;
+
+          parsedResult = {
+            accuracy: confidence,
+            explanation: result.explanation,
+            class: verdictClass,
+            f1: 0,
+            precision: 0,
+            recall: 0,
+            indicators: result.indicators,
+            modelUsed: 'Gemini 2.0 Flash',
+            probabilities: {
+              real: (isFake ? (100 - confidence) : (isUncertain ? 50 : confidence)) / 100,
+              fake: (isFake ? confidence : (isUncertain ? 50 : 100 - confidence)) / 100
+            }
+          };
+          break;
+        }
         case 'video': {
-          const isFake = data.is_fake;
-          const rawScore = data.metadata?.raw_score ?? (data.confidence / 100);
-          const confidence = isFake ? rawScore * 100 : (1 - rawScore) * 100;
+          let isFake, confidence, rawScore, modelUsed, realProb, fakeProb;
+
+          if (data.prediction !== undefined) {
+            // New Video Backend format
+            const prediction = data.prediction; // "FAKE" or "REAL"
+            const score = data.score; // Confidence (0-1)
+
+            isFake = prediction === 'FAKE';
+            confidence = score * 100;
+            rawScore = score;
+            modelUsed = 'GenConViT (Video-Only)';
+
+            fakeProb = isFake ? score : (1 - score);
+            realProb = isFake ? (1 - score) : score;
+          } else {
+            // Main Backend format
+            isFake = data.is_fake;
+            rawScore = data.metadata?.raw_score ?? (data.confidence / 100);
+            confidence = isFake ? rawScore * 100 : (1 - rawScore) * 100;
+            modelUsed = data.metadata?.model_variant || 'GenConViT-ED';
+            fakeProb = rawScore;
+            realProb = 1 - rawScore;
+          }
 
           parsedResult = {
             accuracy: confidence,
             explanation: isFake
-              ? `GenConViT-ED detected manipulation patterns across ${data.metadata?.frames_analyzed || 'multiple'} frames with ${confidence.toFixed(1)}% confidence. Temporal inconsistencies and facial artifacts suggest this video has been synthetically altered.`
-              : `GenConViT-ED analyzed ${data.metadata?.frames_analyzed || 'multiple'} frames and found no significant manipulation artifacts. The temporal consistency and facial features appear authentic with ${confidence.toFixed(1)}% confidence.`,
+              ? `${modelUsed} detected manipulation patterns across video frames with ${confidence.toFixed(1)}% confidence. Temporal inconsistencies suggest synthetic alteration.`
+              : `${modelUsed} found no significant manipulation artifacts. The video appears authentic with ${confidence.toFixed(1)}% confidence.`,
             f1: 0.94, precision: 0.96, recall: 0.92,
             class: isFake ? 'FAKE' : 'REAL',
-            framesAnalyzed: data.metadata?.frames_analyzed,
+            framesAnalyzed: data.metadata?.frames_analyzed, // Might be undefined in new backend
             processingTime: data.metadata?.processing_time_ms,
             rawScore,
-            modelUsed: data.metadata?.model_variant || 'GenConViT-ED',
-            probabilities: { real: 1 - rawScore, fake: rawScore }
+            modelUsed: modelUsed,
+            probabilities: { real: realProb, fake: fakeProb }
           };
           break;
         }
@@ -959,30 +1019,56 @@ export default function Detector({ type, title }: DetectorProps) {
               </div>
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div className="bg-[#0a0a0b] rounded-lg p-2">
-                  <p className="text-[var(--primary)] font-bold text-lg">94%</p>
+                  <p className="text-[var(--primary)] font-bold text-lg">
+                    {result?.accuracy ? `${Math.round(result.accuracy)}%` : '-'}
+                  </p>
                   <p className="text-gray-500 text-xs">Accuracy</p>
                 </div>
                 <div className="bg-[#0a0a0b] rounded-lg p-2">
-                  <p className="text-green-400 font-bold text-lg">96%</p>
+                  <p className="text-green-400 font-bold text-lg">
+                    {result?.precision ? `${Math.round(result.precision * 100)}%` : '-'}
+                  </p>
                   <p className="text-gray-500 text-xs">Precision</p>
                 </div>
                 <div className="bg-[#0a0a0b] rounded-lg p-2">
-                  <p className="text-blue-400 font-bold text-lg">92%</p>
+                  <p className="text-blue-400 font-bold text-lg">
+                    {result?.recall ? `${Math.round(result.recall * 100)}%` : '-'}
+                  </p>
                   <p className="text-gray-500 text-xs">Recall</p>
                 </div>
               </div>
             </div>
 
             {/* AI Explanation Card */}
-            {result && (
-              <div className="bg-gradient-to-br from-[#1a1a1c] to-[#111113] border border-gray-800 rounded-2xl p-5 space-y-3 animate-in fade-in slide-in-from-left-4">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-[var(--primary)]/20 rounded-lg">
-                    <Sparkles className="w-4 h-4 text-[var(--primary)]" />
+            {result && (result.explanation || (result.indicators && result.indicators.length > 0)) && (
+              <div className="bg-gradient-to-br from-[#1a1a1c] to-[#111113] border border-gray-800 rounded-2xl p-5 space-y-4 animate-in fade-in slide-in-from-left-4">
+                {result.explanation && (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 bg-[var(--primary)]/20 rounded-lg">
+                        <Sparkles className="w-4 h-4 text-[var(--primary)]" />
+                      </div>
+                      <div className="flex flex-col">
+                        <h3 className="text-white font-medium">AI Analysis</h3>
+                      </div>
+                    </div>
+                    <p className="text-gray-400 text-sm leading-relaxed">{result.explanation}</p>
+                  </>
+                )}
+
+                {result.indicators && result.indicators.length > 0 && (
+                  <div className="pt-3 border-t border-gray-800/50">
+                    <h4 className="text-gray-300 text-xs font-semibold uppercase tracking-wider mb-2">Key Indicators</h4>
+                    <ul className="space-y-1.5">
+                      {result.indicators.map((indicator, idx) => (
+                        <li key={idx} className="text-gray-400 text-sm flex items-start gap-2">
+                          <span className="mt-1.5 w-1 h-1 rounded-full bg-[var(--primary)] flex-shrink-0" />
+                          {indicator}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                  <h3 className="text-white font-medium">AI Analysis</h3>
-                </div>
-                <p className="text-gray-400 text-sm leading-relaxed">{result.explanation}</p>
+                )}
               </div>
             )}
           </div>

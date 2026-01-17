@@ -1020,6 +1020,32 @@ export default function DetectionScreen() {
                   </Text>
                 </View>
               </View>
+
+              {/* AI Analysis Details */}
+              {(result.explanation || (result.indicators && result.indicators.length > 0)) && (
+                <View style={styles.aiAnalysisSection}>
+                  <View style={styles.aiHeaderRow}>
+                    <Ionicons name="analytics" size={18} color={appTheme.colors.primary} />
+                    <Text style={styles.aiAnalysisTitle}>AI Analysis</Text>
+                  </View>
+
+                  {result.explanation && (
+                    <Text style={styles.explanationText}>{result.explanation}</Text>
+                  )}
+
+                  {result.indicators && result.indicators.length > 0 && (
+                    <View style={styles.indicatorsContainer}>
+                      <Text style={styles.indicatorsTitle}>KEY INDICATORS</Text>
+                      {result.indicators.map((indicator, idx) => (
+                        <View key={idx} style={styles.indicatorRow}>
+                          <View style={styles.indicatorDot} />
+                          <Text style={styles.indicatorText}>{indicator}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              )}
             </GlassCard>
           </Animated.View>
         )}
@@ -1027,7 +1053,7 @@ export default function DetectionScreen() {
         {/* Bottom Padding */}
         <View style={{ height: 40 + insets.bottom }} />
       </ScrollView>
-    </View>
+    </View >
   );
 }
 
@@ -1425,5 +1451,61 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     padding: 32,
     alignItems: 'center',
+  },
+  aiAnalysisSection: {
+    marginTop: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  aiHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 8,
+  },
+  aiAnalysisTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  explanationText: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  indicatorsContainer: {
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    paddingTop: 12,
+  },
+  indicatorsTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: 'rgba(255, 255, 255, 0.5)',
+    marginBottom: 8,
+    letterSpacing: 1,
+  },
+  indicatorRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 6,
+    gap: 8,
+  },
+  indicatorDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: appTheme.colors.primary,
+    marginTop: 8,
+  },
+  indicatorText: {
+    flex: 1,
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.9)',
+    lineHeight: 18,
   },
 });
