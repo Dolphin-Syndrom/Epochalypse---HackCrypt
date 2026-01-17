@@ -16,29 +16,9 @@ class VideoDetectionService:
         # self.model.load_state_dict(torch.load(model_path, map_location=self.device))
         self.model.eval()
 
-    async def process(self, video_path: str): # Renamed to 'process' to match previous walkthrough/expectation or kept 'detect'? User prompt said 'detect' in the class code. I'll stick to 'detect' as per snippet but 'process' is synonymous. Wait, previous file had 'process'. The user snippet has 'detect'. I will use 'detect' and alias process if needed, or just replace the file content.
-        # Actually, let's stick to the user's provided code for the method name: 'detect'.
-        # However, the previous service called it 'process'. I'll double check if existing code uses 'process'.
-        # The previous step I wrote 'process'. I will replace 'process' with 'detect' to match the user's new instruction.
-        return await self.detect(video_path)
-
-    def _calculate_dynamic_threshold(self, frame_w, frame_h):
-        base_threshold = settings.VIDEO_FAKE_THRESHOLD
-        # If the video is low resolution (e.g. < VGA), be less sensitive to "noise"
-        if frame_w * frame_h < (640 * 480):
-            print(f"  [Dynamic Threshold] Low-res video ({frame_w}x{frame_h}). Increasing threshold by +0.15.")
-            return base_threshold + 0.15 
-        return base_threshold
-
     async def detect(self, video_path: str):
         cap = cv2.VideoCapture(video_path)
         fps = cap.get(cv2.CAP_PROP_FPS)
-        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        
-        # Calculate threshold once for the video
-        dynamic_threshold = self._calculate_dynamic_threshold(width, height)
-        
         frame_interval = int(fps) # Extracts 1 frame per second
         
         results = []
@@ -100,25 +80,19 @@ class VideoDetectionService:
         
         cap.release()
         
-        cap.release()
-        
         if not results:
             return {"verdict": "UNDETERMINED", "confidence": 0.0, "evidence": []}
 
-        # Median Aggregation
-        # Median is robust to outliers (single bad frames) but doesn't require a hard vote count.
+        # Median Aggregation (User Requested Default)
         all_scores = [r['score'] for r in results]
         median_score = np.median(all_scores)
         
-        verdict = "FAKE" if median_score > dynamic_threshold else "REAL"
+        verdict = "FAKE" if median_score > settings.VIDEO_FAKE_THRESHOLD else "REAL"
         confidence = median_score * 100
         
-        print(f"Aggregation: Median Score {median_score:.4f} (Threshold {dynamic_threshold:.2f}). Verdict: {verdict}")
+        print(f"Aggregation: Median Score {median_score:.4f}. Verdict: {verdict}")
 
-        # Filter evidence based on individual frame scores being high, not just the median.
-        # We still want to see the "why" even if the median suppresses it? 
-        # Actually, standard practice is showing high-score frames as evidence.
-        suspicious_frames = [r for r in results if r['score'] > dynamic_threshold]
+        suspicious_frames = [r for r in results if r['score'] > settings.VIDEO_FAKE_THRESHOLD]
         evidence_paths = [r['heatmap'] for r in suspicious_frames][:5]
 
         return {

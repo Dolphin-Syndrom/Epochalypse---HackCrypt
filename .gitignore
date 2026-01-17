@@ -182,3 +182,13 @@ temp/
 # ========================
 backend/config/gcp-key.json
 **/gcp-key.json
+
+# extras
+sample1.mp4
+sample2.mp4
+sample3.mp4
+create_dummy_video.py
+test_pipeline.py
+implementation_plan.md
+IMPLEMENTATION_WALKTHROUGH.md
+task.md
