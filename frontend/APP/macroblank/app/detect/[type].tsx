@@ -8,9 +8,13 @@ import {
   ActivityIndicator,
   Alert,
   StatusBar,
+  Platform,
+  Image,
+  Dimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
@@ -60,7 +64,7 @@ const typeConfigs: Record<DetectionType, TypeConfig> = {
     subtitle: 'Wav2Vec2-AASIST',
     icon: 'mic',
     gradient: ['#10B981', '#14B8A6'],
-    acceptedTypes: ['audio/wav', 'audio/mp3', 'audio/flac', 'audio/ogg'],
+    acceptedTypes: ['audio/*'],
     description: 'Upload an audio file to detect voice cloning',
   },
   'ai-generated': {
@@ -72,6 +76,557 @@ const typeConfigs: Record<DetectionType, TypeConfig> = {
     description: 'Upload an image to check if it was AI-generated (DALL-E, Midjourney, Stable Diffusion)',
   },
 };
+
+// Glass Card Component
+const GlassCard = ({ children, style }: { children: React.ReactNode; style?: any }) => {
+  if (Platform.OS === 'ios') {
+    return (
+      <BlurView intensity={20} tint="dark" style={[styles.glassCard, style]}>
+        <View style={styles.glassHighlight} />
+        {children}
+      </BlurView>
+    );
+  }
+  return (
+    <View style={[styles.glassCardAndroid, style]}>
+      <View style={styles.glassHighlight} />
+      {children}
+    </View>
+  );
+};
+
+// Forensic Scanning Overlay - Cyberpunk style analysis animation
+const ForensicScanOverlay = ({ isActive }: { isActive: boolean }) => {
+  const scanLinePosition = useSharedValue(0);
+  const [dataStrings, setDataStrings] = useState<string[]>([]);
+  const opacity = useSharedValue(0);
+
+  useEffect(() => {
+    if (isActive) {
+      opacity.value = withTiming(1, { duration: 300 });
+      // Animate scan line continuously
+      const animate = () => {
+        scanLinePosition.value = 0;
+        scanLinePosition.value = withTiming(1, {
+          duration: 2000,
+          easing: Easing.linear
+        });
+      };
+      animate();
+      const interval = setInterval(animate, 2000);
+
+      // Generate random data strings
+      const dataInterval = setInterval(() => {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        const templates = [
+          () => `${Math.floor(Math.random() * 9999999).toString().padStart(7, '0')}`,
+          () => `<<<${Array.from({ length: 3 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')}<<<`,
+          () => `ID:${Math.floor(Math.random() * 999999)}`,
+          () => `SCAN:${Math.floor(Math.random() * 100)}%`,
+        ];
+        setDataStrings(prev => {
+          const newData = [...prev, templates[Math.floor(Math.random() * templates.length)]()];
+          return newData.slice(-6);
+        });
+      }, 300);
+
+      return () => {
+        clearInterval(interval);
+        clearInterval(dataInterval);
+      };
+    } else {
+      opacity.value = withTiming(0, { duration: 200 });
+    }
+  }, [isActive, scanLinePosition, opacity]);
+
+  const scanLineStyle = useAnimatedStyle(() => ({
+    top: `${scanLinePosition.value * 100}%`,
+  }));
+
+  const overlayStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
+
+  if (!isActive) return null;
+
+  return (
+    <Animated.View style={[scanStyles.overlay, overlayStyle]}>
+      {/* Scan line */}
+      <Animated.View style={[scanStyles.scanLine, scanLineStyle]} />
+
+      {/* Secondary scan line */}
+      <Animated.View style={[scanStyles.scanLineSecondary, { top: `${(scanLinePosition.value * 100 + 20) % 100}%` }]} />
+
+      {/* Corner brackets */}
+      <View style={[scanStyles.corner, scanStyles.topLeft]} />
+      <View style={[scanStyles.corner, scanStyles.topRight]} />
+      <View style={[scanStyles.corner, scanStyles.bottomLeft]} />
+      <View style={[scanStyles.corner, scanStyles.bottomRight]} />
+
+      {/* Data overlays - Left */}
+      <View style={scanStyles.dataLeft}>
+        <Text style={scanStyles.dataText}>PASSPORT</Text>
+        <Text style={scanStyles.dataText}>PASSEPORT/PASAPORTE</Text>
+        {dataStrings.slice(0, 2).map((str, i) => (
+          <Text key={i} style={scanStyles.dataText}>{str}</Text>
+        ))}
+      </View>
+
+      {/* Data overlays - Right */}
+      <View style={scanStyles.dataRight}>
+        {dataStrings.slice(2, 4).map((str, i) => (
+          <Text key={i} style={scanStyles.dataTextPurple}>{`<<<${str}`}</Text>
+        ))}
+      </View>
+
+      {/* Bottom strip */}
+      <View style={scanStyles.bottomStrip}>
+        <Text style={scanStyles.dataText}>{"<<<ANALYZING<<<DEEPFAKE<<<"}</Text>
+      </View>
+
+      {/* AI Analysis badge */}
+      <LinearGradient
+        colors={['#EC4899', '#8B5CF6']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={scanStyles.aiBadge}
+      >
+        <Text style={scanStyles.aiBadgeText}>AI ANALYSIS</Text>
+      </LinearGradient>
+
+      {/* Vignette */}
+      <LinearGradient
+        colors={['rgba(0,0,0,0.4)', 'transparent', 'rgba(0,0,0,0.4)']}
+        style={scanStyles.vignette}
+      />
+    </Animated.View>
+  );
+};
+
+const scanStyles = StyleSheet.create({
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 10,
+    overflow: 'hidden',
+  },
+  scanLine: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 3,
+    backgroundColor: '#22D3EE',
+    shadowColor: '#22D3EE',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  scanLineSecondary: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 2,
+    backgroundColor: '#C084FC',
+    opacity: 0.6,
+    shadowColor: '#C084FC',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  corner: {
+    position: 'absolute',
+    width: 60,
+    height: 60,
+    borderColor: '#22D3EE',
+  },
+  topLeft: {
+    top: 16,
+    left: 16,
+    borderTopWidth: 3,
+    borderLeftWidth: 3,
+  },
+  topRight: {
+    top: 16,
+    right: 16,
+    borderTopWidth: 3,
+    borderRightWidth: 3,
+  },
+  bottomLeft: {
+    bottom: 16,
+    left: 16,
+    borderBottomWidth: 3,
+    borderLeftWidth: 3,
+  },
+  bottomRight: {
+    bottom: 16,
+    right: 16,
+    borderBottomWidth: 3,
+    borderRightWidth: 3,
+  },
+  dataLeft: {
+    position: 'absolute',
+    top: 24,
+    left: 24,
+  },
+  dataRight: {
+    position: 'absolute',
+    top: 24,
+    right: 24,
+    alignItems: 'flex-end',
+  },
+  dataText: {
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    fontSize: 11,
+    color: 'rgba(34, 211, 238, 0.8)',
+    marginBottom: 3,
+  },
+  dataTextPurple: {
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    fontSize: 11,
+    color: 'rgba(192, 132, 252, 0.8)',
+    marginBottom: 3,
+  },
+  bottomStrip: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+  },
+  aiBadge: {
+    position: 'absolute',
+    bottom: 50,
+    right: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  aiBadgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  vignette: {
+    ...StyleSheet.absoluteFillObject,
+  },
+});
+
+// Audio Waveform Analysis Overlay for Mobile
+const AudioWaveformOverlay = ({ isActive }: { isActive: boolean }) => {
+  const [bars, setBars] = useState<number[]>(Array(24).fill(20));
+  const [analysisText, setAnalysisText] = useState('INITIALIZING...');
+  const opacity = useSharedValue(0);
+
+  useEffect(() => {
+    if (isActive) {
+      opacity.value = withTiming(1, { duration: 300 });
+
+      const texts = [
+        'ANALYZING VOICE PATTERNS...',
+        'DETECTING FREQUENCY ANOMALIES...',
+        'SCANNING FOR SYNTHESIS ARTIFACTS...',
+        'VALIDATING AUDIO SIGNATURE...',
+      ];
+      let textIndex = 0;
+
+      const barInterval = setInterval(() => {
+        setBars(prev => prev.map(() => Math.random() * 80 + 20));
+      }, 100);
+
+      const textInterval = setInterval(() => {
+        setAnalysisText(texts[textIndex % texts.length]);
+        textIndex++;
+      }, 1500);
+
+      return () => {
+        clearInterval(barInterval);
+        clearInterval(textInterval);
+      };
+    } else {
+      opacity.value = withTiming(0, { duration: 200 });
+    }
+  }, [isActive, opacity]);
+
+  const overlayStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
+
+  if (!isActive) return null;
+
+  return (
+    <Animated.View style={[audioStyles.overlay, overlayStyle]}>
+      {/* Waveform bars */}
+      <View style={audioStyles.waveformContainer}>
+        {bars.map((height, i) => (
+          <View
+            key={i}
+            style={[
+              audioStyles.bar,
+              { height: `${height}%` }
+            ]}
+          />
+        ))}
+      </View>
+
+      {/* Analysis status */}
+      <View style={audioStyles.statusContainer}>
+        <View style={audioStyles.statusDot} />
+        <Text style={audioStyles.statusText}>{analysisText}</Text>
+      </View>
+
+      {/* Frequency labels */}
+      <View style={audioStyles.freqLabels}>
+        <Text style={audioStyles.freqText}>20Hz</Text>
+        <Text style={audioStyles.freqText}>2kHz</Text>
+        <Text style={audioStyles.freqText}>20kHz</Text>
+      </View>
+
+      {/* Badge */}
+      <LinearGradient
+        colors={['#10B981', '#14B8A6']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={audioStyles.badge}
+      >
+        <Text style={audioStyles.badgeText}>VOICE ANALYSIS</Text>
+      </LinearGradient>
+    </Animated.View>
+  );
+};
+
+const audioStyles = StyleSheet.create({
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    zIndex: 10,
+  },
+  waveformContainer: {
+    position: 'absolute',
+    top: '30%',
+    left: 16,
+    right: 16,
+    height: '40%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+  },
+  bar: {
+    width: 8,
+    backgroundColor: '#10B981',
+    borderRadius: 4,
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 4,
+  },
+  statusContainer: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    right: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#10B981',
+  },
+  statusText: {
+    color: '#10B981',
+    fontSize: 11,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  freqLabels: {
+    position: 'absolute',
+    bottom: 16,
+    left: 16,
+    right: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  freqText: {
+    color: 'rgba(16, 185, 129, 0.6)',
+    fontSize: 10,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  badge: {
+    position: 'absolute',
+    bottom: 50,
+    right: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 4,
+  },
+  badgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+});
+
+// Video Frame Analysis Overlay for Mobile
+const VideoAnalysisOverlay = ({ isActive }: { isActive: boolean }) => {
+  const [currentFrame, setCurrentFrame] = useState(0);
+  const [frameResults, setFrameResults] = useState<number[]>([]);
+  const totalFrames = 30;
+  const opacity = useSharedValue(0);
+
+  useEffect(() => {
+    if (isActive) {
+      opacity.value = withTiming(1, { duration: 300 });
+
+      const interval = setInterval(() => {
+        setCurrentFrame(prev => {
+          const next = prev + 1;
+          if (next <= totalFrames) {
+            setFrameResults(r => [...r, Math.random() * 100]);
+          }
+          return next > totalFrames ? 0 : next;
+        });
+      }, 150);
+
+      return () => {
+        clearInterval(interval);
+        setFrameResults([]);
+        setCurrentFrame(0);
+      };
+    } else {
+      opacity.value = withTiming(0, { duration: 200 });
+    }
+  }, [isActive, opacity]);
+
+  const overlayStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
+
+  if (!isActive) return null;
+
+  return (
+    <Animated.View style={[videoStyles.overlay, overlayStyle]}>
+      {/* Frame counter */}
+      <View style={videoStyles.frameCounter}>
+        <Text style={videoStyles.frameLabel}>FRAME ANALYSIS</Text>
+        <Text style={videoStyles.frameNumber}>
+          {String(currentFrame).padStart(2, '0')}/{totalFrames}
+        </Text>
+      </View>
+
+      {/* Timeline */}
+      <View style={videoStyles.timeline}>
+        <Text style={videoStyles.timelineLabel}>TEMPORAL CONSISTENCY</Text>
+        <View style={videoStyles.timelineBar}>
+          {frameResults.map((score, i) => (
+            <View
+              key={i}
+              style={[
+                videoStyles.timelineSegment,
+                { backgroundColor: score > 70 ? '#EF4444' : score > 40 ? '#F59E0B' : '#22C55E' }
+              ]}
+            />
+          ))}
+        </View>
+        <View style={videoStyles.timelineLabels}>
+          <Text style={videoStyles.timelineLabelText}>START</Text>
+          <Text style={videoStyles.timelineLabelText}>END</Text>
+        </View>
+      </View>
+
+      {/* Badge */}
+      <LinearGradient
+        colors={['#6366F1', '#8B5CF6']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={videoStyles.badge}
+      >
+        <Text style={videoStyles.badgeText}>VIDEO ANALYSIS</Text>
+      </LinearGradient>
+    </Animated.View>
+  );
+};
+
+const videoStyles = StyleSheet.create({
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 10,
+  },
+  frameCounter: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(99, 102, 241, 0.5)',
+  },
+  frameLabel: {
+    color: '#6366F1',
+    fontSize: 10,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    marginBottom: 4,
+  },
+  frameNumber: {
+    color: '#FFFFFF',
+    fontSize: 24,
+    fontWeight: '700',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  timeline: {
+    position: 'absolute',
+    bottom: 16,
+    left: 16,
+    right: 16,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(99, 102, 241, 0.5)',
+  },
+  timelineLabel: {
+    color: '#6366F1',
+    fontSize: 10,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    marginBottom: 8,
+  },
+  timelineBar: {
+    height: 24,
+    backgroundColor: '#1F2937',
+    borderRadius: 4,
+    flexDirection: 'row',
+    overflow: 'hidden',
+  },
+  timelineSegment: {
+    flex: 1,
+  },
+  timelineLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 4,
+  },
+  timelineLabelText: {
+    color: '#6B7280',
+    fontSize: 9,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  badge: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 4,
+  },
+  badgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+});
 
 export default function DetectionScreen() {
   const { type } = useLocalSearchParams<{ type: DetectionType }>();
@@ -195,7 +750,7 @@ export default function DetectionScreen() {
       }
 
       setResult(detectionResult);
-      
+
       // Animate gauge
       const targetRotation = detectionResult.confidence * 1.8; // 180 degrees max
       gaugeRotation.value = withTiming(targetRotation, {
@@ -270,15 +825,46 @@ export default function DetectionScreen() {
         <Animated.View entering={FadeInDown.delay(150).duration(500).springify()}>
           <View style={styles.uploadSection}>
             <TouchableOpacity
-              style={[styles.uploadArea, selectedFile && styles.uploadAreaSelected]}
+              style={[styles.glassUploadArea, selectedFile && styles.uploadAreaSelected]}
               onPress={handleFilePick}
               activeOpacity={0.8}
             >
               {selectedFile ? (
                 <View style={styles.selectedFileInfo}>
-                  <View style={styles.fileIconContainer}>
-                    <Ionicons name={config.icon} size={32} color={config.gradient[0]} />
-                  </View>
+                  {/* Image Preview */}
+                  {(type === 'image' || type === 'ai-generated') ? (
+                    <View style={styles.imagePreviewContainer}>
+                      <Image
+                        source={{ uri: selectedFile.uri }}
+                        style={styles.imagePreview}
+                        resizeMode="cover"
+                      />
+                      {/* Forensic Scan Overlay for images during analysis */}
+                      <ForensicScanOverlay isActive={isAnalyzing} />
+                    </View>
+                  ) : type === 'video' ? (
+                    <View style={styles.imagePreviewContainer}>
+                      <View style={styles.videoPlaceholder}>
+                        <Ionicons name="videocam" size={48} color="#6366F1" />
+                        <Text style={styles.videoPlaceholderText}>{selectedFile.name}</Text>
+                      </View>
+                      {/* Video Analysis Overlay */}
+                      <VideoAnalysisOverlay isActive={isAnalyzing} />
+                    </View>
+                  ) : type === 'audio' ? (
+                    <View style={styles.imagePreviewContainer}>
+                      <View style={styles.audioPlaceholder}>
+                        <Ionicons name="mic" size={48} color="#10B981" />
+                        <Text style={styles.audioPlaceholderText}>{selectedFile.name}</Text>
+                      </View>
+                      {/* Audio Waveform Overlay */}
+                      <AudioWaveformOverlay isActive={isAnalyzing} />
+                    </View>
+                  ) : (
+                    <View style={styles.fileIconContainer}>
+                      <Ionicons name={config.icon} size={32} color={config.gradient[0]} />
+                    </View>
+                  )}
                   <Text style={styles.fileName} numberOfLines={2}>
                     {selectedFile.name}
                   </Text>
@@ -303,45 +889,45 @@ export default function DetectionScreen() {
 
         {/* Analyze Button */}
         <Animated.View entering={FadeInDown.delay(300).duration(500).springify()}>
-        <TouchableOpacity
-          style={[
-            styles.analyzeButton,
-            (isAnalyzing || !selectedFile) && styles.analyzeButtonDisabled,
-          ]}
-          onPress={handleAnalyze}
-          disabled={isAnalyzing || !selectedFile}
-          activeOpacity={0.8}
-        >
-          <Animated.View style={pulseStyle}>
-            <LinearGradient
-              colors={isAnalyzing ? ['#3A3A45', '#3A3A45'] : [config.gradient[0], config.gradient[1]]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.analyzeButtonGradient}
-            >
-              {isAnalyzing ? (
-                <View style={styles.analyzingContent}>
-                  <ActivityIndicator color="#FFFFFF" size="small" />
-                  <Text style={styles.analyzeButtonText}>Analyzing...</Text>
-                  <View style={styles.progressBarContainer}>
-                    <Animated.View style={[styles.progressBar, progressStyle]} />
+          <TouchableOpacity
+            style={[
+              styles.analyzeButton,
+              (isAnalyzing || !selectedFile) && styles.analyzeButtonDisabled,
+            ]}
+            onPress={handleAnalyze}
+            disabled={isAnalyzing || !selectedFile}
+            activeOpacity={0.8}
+          >
+            <Animated.View style={pulseStyle}>
+              <LinearGradient
+                colors={isAnalyzing ? ['#3A3A45', '#3A3A45'] : [config.gradient[0], config.gradient[1]]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.analyzeButtonGradient}
+              >
+                {isAnalyzing ? (
+                  <View style={styles.analyzingContent}>
+                    <ActivityIndicator color="#FFFFFF" size="small" />
+                    <Text style={styles.analyzeButtonText}>Analyzing...</Text>
+                    <View style={styles.progressBarContainer}>
+                      <Animated.View style={[styles.progressBar, progressStyle]} />
+                    </View>
                   </View>
-                </View>
-              ) : (
-                <View style={styles.analyzeContent}>
-                  <Ionicons name="scan" size={22} color="#FFFFFF" />
-                  <Text style={styles.analyzeButtonText}>Analyze</Text>
-                </View>
-              )}
-            </LinearGradient>
-          </Animated.View>
-        </TouchableOpacity>
+                ) : (
+                  <View style={styles.analyzeContent}>
+                    <Ionicons name="scan" size={22} color="#FFFFFF" />
+                    <Text style={styles.analyzeButtonText}>Analyze</Text>
+                  </View>
+                )}
+              </LinearGradient>
+            </Animated.View>
+          </TouchableOpacity>
         </Animated.View>
 
         {/* Results Section */}
         {result && (
           <Animated.View style={[styles.resultSection, resultStyle]}>
-            <View style={styles.resultCard}>
+            <GlassCard>
               {/* Gauge */}
               <View style={styles.gaugeContainer}>
                 <View style={styles.gaugeBackground}>
@@ -434,7 +1020,7 @@ export default function DetectionScreen() {
                   </Text>
                 </View>
               </View>
-            </View>
+            </GlassCard>
           </Animated.View>
         )}
 
@@ -551,6 +1137,50 @@ const styles = StyleSheet.create({
   },
   selectedFileInfo: {
     alignItems: 'center',
+    width: '100%',
+  },
+  imagePreviewContainer: {
+    width: '100%',
+    height: 250,
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 12,
+    backgroundColor: '#000',
+    position: 'relative',
+  },
+  imagePreview: {
+    width: '100%',
+    height: '100%',
+  },
+  videoPlaceholder: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  videoPlaceholderText: {
+    color: '#6366F1',
+    fontSize: 12,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    maxWidth: '80%',
+    textAlign: 'center',
+  },
+  audioPlaceholder: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  audioPlaceholderText: {
+    color: '#10B981',
+    fontSize: 12,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    maxWidth: '80%',
+    textAlign: 'center',
   },
   fileIconContainer: {
     width: 64,
@@ -760,5 +1390,40 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: appTheme.colors.text,
     textAlign: 'right',
+  },
+  // Glass effect styles
+  glassCard: {
+    backgroundColor: 'transparent',
+    borderRadius: 24,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: appTheme.colors.glassBorder,
+    overflow: 'hidden',
+    ...appTheme.shadows.glass,
+  },
+  glassCardAndroid: {
+    backgroundColor: appTheme.colors.glass,
+    borderRadius: 24,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: appTheme.colors.glassBorder,
+    ...appTheme.shadows.glass,
+  },
+  glassHighlight: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: appTheme.colors.glassHighlight,
+  },
+  glassUploadArea: {
+    backgroundColor: appTheme.colors.glass,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: appTheme.colors.glassBorder,
+    borderStyle: 'dashed',
+    padding: 32,
+    alignItems: 'center',
   },
 });

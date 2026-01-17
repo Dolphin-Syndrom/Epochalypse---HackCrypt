@@ -1,6 +1,6 @@
 // API Configuration
-export const API_BASE_URL = 'http://192.168.0.116:8002'; // Change to your local IP for device testing
-// For emulator use: 'http://10.0.2.2:8002' (Android) or 'http://localhost:8002' (iOS simulator)
+export const API_BASE_URL = 'http://192.168.0.116:8000'; // Change to your local IP for device testing
+// For emulator use: 'http://10.0.2.2:8000' (Android) or 'http://localhost:8000' (iOS simulator)
 
 export const API_ENDPOINTS = {
   video: `${API_BASE_URL}/api/v1/detect/video`,

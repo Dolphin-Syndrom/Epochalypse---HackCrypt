@@ -8,11 +8,31 @@ import {
   Switch,
   Linking,
   StatusBar,
+  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { appTheme } from '../../constants/appTheme';
+
+// Glass Card Component
+const GlassCard = ({ children, style }: { children: React.ReactNode; style?: any }) => {
+  if (Platform.OS === 'ios') {
+    return (
+      <BlurView intensity={20} tint="dark" style={[styles.glassCard, style]}>
+        <View style={styles.glassHighlight} />
+        {children}
+      </BlurView>
+    );
+  }
+  return (
+    <View style={[styles.glassCardAndroid, style]}>
+      <View style={styles.glassHighlight} />
+      {children}
+    </View>
+  );
+};
 
 interface SettingItemProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -65,20 +85,22 @@ export default function SettingsScreen() {
         </Animated.View>
 
         {/* App Info Card */}
-        <Animated.View entering={FadeInDown.delay(100).duration(500).springify()} style={styles.appInfoCard}>
-          <View style={styles.appLogoContainer}>
-            <Ionicons name="shield-checkmark" size={32} color="#050508" />
-          </View>
-          <View style={styles.appInfoText}>
-            <Text style={styles.appName}>MacroBlank</Text>
-            <Text style={styles.appVersion}>Version 1.0.0</Text>
-          </View>
+        <Animated.View entering={FadeInDown.delay(100).duration(500).springify()}>
+          <GlassCard style={styles.appInfoCard}>
+            <View style={styles.appLogoContainer}>
+              <Ionicons name="shield-checkmark" size={32} color="#050508" />
+            </View>
+            <View style={styles.appInfoText}>
+              <Text style={styles.appName}>MacroBlank</Text>
+              <Text style={styles.appVersion}>Version 1.0.0</Text>
+            </View>
+          </GlassCard>
         </Animated.View>
 
         {/* General Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>General</Text>
-          <View style={styles.sectionContent}>
+          <GlassCard style={styles.sectionContent}>
             <SettingItem
               icon="notifications-outline"
               title="Notifications"
@@ -107,13 +129,13 @@ export default function SettingsScreen() {
                 />
               }
             />
-          </View>
+          </GlassCard>
         </View>
 
         {/* Detection Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Detection</Text>
-          <View style={styles.sectionContent}>
+          <GlassCard style={styles.sectionContent}>
             <SettingItem
               icon="server-outline"
               title="API Endpoint"
@@ -132,13 +154,13 @@ export default function SettingsScreen() {
               subtitle="GenConViT-ED (Video)"
               onPress={() => {}}
             />
-          </View>
+          </GlassCard>
         </View>
 
         {/* About Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>About</Text>
-          <View style={styles.sectionContent}>
+          <GlassCard style={styles.sectionContent}>
             <SettingItem
               icon="information-circle-outline"
               title="About MacroBlank"
@@ -159,11 +181,11 @@ export default function SettingsScreen() {
               title="Help & Support"
               onPress={() => {}}
             />
-          </View>
+          </GlassCard>
         </View>
 
         {/* Model Info */}
-        <View style={styles.modelInfoSection}>
+        <GlassCard style={styles.modelInfoSection}>
           <Text style={styles.modelInfoTitle}>Detection Models</Text>
           <View style={styles.modelList}>
             <View style={styles.modelItem}>
@@ -187,7 +209,7 @@ export default function SettingsScreen() {
               <Text style={styles.modelType}>AI Generated</Text>
             </View>
           </View>
-        </View>
+        </GlassCard>
 
         {/* Footer */}
         <View style={styles.footer}>
@@ -231,12 +253,8 @@ const styles = StyleSheet.create({
   appInfoCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: appTheme.colors.surface,
-    borderRadius: 20,
     padding: 20,
     marginBottom: 24,
-    borderWidth: 1,
-    borderColor: appTheme.colors.border,
   },
   appLogoContainer: {
     width: 60,
@@ -273,11 +291,7 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   sectionContent: {
-    backgroundColor: appTheme.colors.surface,
-    borderRadius: 16,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: appTheme.colors.border,
+    padding: 0,
   },
   settingItem: {
     flexDirection: 'row',
@@ -309,12 +323,8 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   modelInfoSection: {
-    backgroundColor: appTheme.colors.surface,
-    borderRadius: 16,
     padding: 20,
     marginBottom: 24,
-    borderWidth: 1,
-    borderColor: appTheme.colors.border,
   },
   modelInfoTitle: {
     fontSize: 15,
@@ -361,5 +371,30 @@ const styles = StyleSheet.create({
     color: appTheme.colors.textMuted,
     marginTop: 4,
     opacity: 0.7,
+  },
+  // Glass effect styles
+  glassCard: {
+    backgroundColor: 'transparent',
+    borderRadius: 20,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: appTheme.colors.glassBorder,
+    ...appTheme.shadows.glass,
+  },
+  glassCardAndroid: {
+    backgroundColor: appTheme.colors.glass,
+    borderRadius: 20,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: appTheme.colors.glassBorder,
+    ...appTheme.shadows.glass,
+  },
+  glassHighlight: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: appTheme.colors.glassHighlight,
   },
 });

@@ -5,11 +5,31 @@ import {
   StyleSheet,
   ScrollView,
   StatusBar,
+  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { appTheme } from '../../constants/appTheme';
+
+// Glass Card Component
+const GlassCard = ({ children, style }: { children: React.ReactNode; style?: any }) => {
+  if (Platform.OS === 'ios') {
+    return (
+      <BlurView intensity={20} tint="dark" style={[styles.glassCard, style]}>
+        <View style={styles.glassHighlight} />
+        {children}
+      </BlurView>
+    );
+  }
+  return (
+    <View style={[styles.glassCardAndroid, style]}>
+      <View style={styles.glassHighlight} />
+      {children}
+    </View>
+  );
+};
 
 // Mock history data - in a real app, this would come from AsyncStorage or a backend
 const mockHistory: HistoryItem[] = [];
@@ -62,19 +82,21 @@ export default function HistoryScreen() {
 
         {/* Empty State */}
         {mockHistory.length === 0 ? (
-          <Animated.View entering={FadeInDown.delay(200).duration(500).springify()} style={styles.emptyState}>
-            <View style={styles.emptyIconContainer}>
-              <Ionicons name="time-outline" size={64} color={appTheme.colors.textMuted} />
-            </View>
-            <Text style={styles.emptyTitle}>No History Yet</Text>
-            <Text style={styles.emptyDescription}>
-              Your detection results will appear here after you analyze your first file.
-            </Text>
+          <Animated.View entering={FadeInDown.delay(200).duration(500).springify()}>
+            <GlassCard style={styles.emptyState}>
+              <View style={styles.emptyIconContainer}>
+                <Ionicons name="time-outline" size={64} color={appTheme.colors.textMuted} />
+              </View>
+              <Text style={styles.emptyTitle}>No History Yet</Text>
+              <Text style={styles.emptyDescription}>
+                Your detection results will appear here after you analyze your first file.
+              </Text>
+            </GlassCard>
           </Animated.View>
         ) : (
           <View style={styles.historyList}>
             {mockHistory.map((item) => (
-              <View key={item.id} style={styles.historyItem}>
+              <GlassCard key={item.id} style={styles.historyItem}>
                 <View style={[styles.typeIndicator, { backgroundColor: getTypeColor(item.type) }]}>
                   <Ionicons name={getTypeIcon(item.type)} size={20} color="#FFFFFF" />
                 </View>
@@ -98,7 +120,7 @@ export default function HistoryScreen() {
                     {item.confidence.toFixed(0)}%
                   </Text>
                 </View>
-              </View>
+              </GlassCard>
             ))}
           </View>
         )}
@@ -138,21 +160,22 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   emptyState: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 80,
+    paddingHorizontal: 20,
+    marginTop: 40,
   },
   emptyIconContainer: {
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: appTheme.colors.surface,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
     borderWidth: 1,
-    borderColor: appTheme.colors.border,
+    borderColor: appTheme.colors.glassBorder,
   },
   emptyTitle: {
     fontSize: 20,
@@ -173,11 +196,7 @@ const styles = StyleSheet.create({
   historyItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: appTheme.colors.surface,
-    borderRadius: 16,
     padding: 16,
-    borderWidth: 1,
-    borderColor: appTheme.colors.border,
   },
   typeIndicator: {
     width: 44,
@@ -217,5 +236,30 @@ const styles = StyleSheet.create({
   resultText: {
     fontSize: 14,
     fontWeight: '600',
+  },
+  // Glass effect styles
+  glassCard: {
+    backgroundColor: 'transparent',
+    borderRadius: 20,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: appTheme.colors.glassBorder,
+    ...appTheme.shadows.glass,
+  },
+  glassCardAndroid: {
+    backgroundColor: appTheme.colors.glass,
+    borderRadius: 20,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: appTheme.colors.glassBorder,
+    ...appTheme.shadows.glass,
+  },
+  glassHighlight: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: appTheme.colors.glassHighlight,
   },
 });

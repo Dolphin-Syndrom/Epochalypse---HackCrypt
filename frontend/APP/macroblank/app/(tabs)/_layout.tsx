@@ -29,9 +29,13 @@ export default function TabLayout() {
         tabBarStyle: styles.tabBar,
         tabBarBackground: () => (
           Platform.OS === 'ios' ? (
-            <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
+            <BlurView intensity={60} tint="dark" style={[StyleSheet.absoluteFill, styles.tabBarBlur]}>
+              <View style={styles.tabBarGlassHighlight} />
+            </BlurView>
           ) : (
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(10, 10, 15, 0.95)' }]} />
+            <View style={[StyleSheet.absoluteFill, styles.tabBarAndroid]}>
+              <View style={styles.tabBarGlassHighlight} />
+            </View>
           )
         ),
         tabBarLabelStyle: styles.tabBarLabel,
@@ -78,9 +82,25 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     paddingBottom: Platform.OS === 'ios' ? 30 : 15,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.05)',
+    borderTopColor: 'rgba(255, 255, 255, 0.08)',
     backgroundColor: 'transparent',
     elevation: 0,
+  },
+  tabBarBlur: {
+    overflow: 'hidden',
+  },
+  tabBarAndroid: {
+    backgroundColor: 'rgba(10, 10, 18, 0.92)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  tabBarGlassHighlight: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
   tabBarLabel: {
     fontWeight: '600',
@@ -103,5 +123,9 @@ const styles = StyleSheet.create({
     height: 4,
     borderRadius: 2,
     backgroundColor: '#E8E8EC',
+    shadowColor: '#E8E8EC',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
   },
 });

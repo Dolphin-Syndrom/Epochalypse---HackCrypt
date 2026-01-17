@@ -40,13 +40,32 @@ class ImageDeepfakeDetector:
         img_raw = Image.open(image_path).convert('RGB')
         
         # 1. Step: Face Extraction
-        # Returns a cropped PIL image. Fallback to center crop if no face found.
-        face_img = self.mtcnn.extract(img_raw, self.mtcnn(img_raw), save_path=None)
-        
-        if face_img is None:
+        # Detect face bounding boxes and extract
+        try:
+            boxes, probs = self.mtcnn.detect(img_raw)
+            if boxes is not None and len(boxes) > 0:
+                # Get the first detected face with highest probability
+                box = boxes[0].astype(int)
+                # Add margin
+                margin = 20
+                x1, y1, x2, y2 = box
+                w, h = img_raw.size
+                x1 = max(0, x1 - margin)
+                y1 = max(0, y1 - margin)
+                x2 = min(w, x2 + margin)
+                y2 = min(h, y2 + margin)
+                face_img = img_raw.crop((x1, y1, x2, y2))
+            else:
+                # Fallback: Manual center crop if MTCNN fails
+                w, h = img_raw.size
+                face_img = img_raw.crop((w//4, h//4, 3*w//4, 3*h//4))
+        except Exception:
             # Fallback: Manual center crop if MTCNN fails
             w, h = img_raw.size
             face_img = img_raw.crop((w//4, h//4, 3*w//4, 3*h//4))
+        
+        # Resize face to 224x224 for model input
+        face_img = face_img.resize((224, 224), Image.LANCZOS)
         
         # 2. Step: OpenCV Enhancement (Denoise & CLAHE)
         # Convert PIL to OpenCV BGR

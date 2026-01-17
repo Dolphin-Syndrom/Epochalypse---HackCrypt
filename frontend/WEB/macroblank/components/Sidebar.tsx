@@ -7,14 +7,12 @@ import {
   Video, 
   Mic, 
   Sparkles, 
-  UserCircle,
-  LayoutDashboard
+  UserCircle
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
 const navItems = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Image Detection', href: '/image', icon: ImageIcon },
   { name: 'Video Detection', href: '/video', icon: Video },
   { name: 'Audio Detection', href: '/audio', icon: Mic },

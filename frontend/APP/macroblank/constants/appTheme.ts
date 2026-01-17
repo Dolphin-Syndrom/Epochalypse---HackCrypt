@@ -1,4 +1,4 @@
-// Theme configuration for futuristic dark UI
+// Theme configuration for futuristic dark UI with Liquid Glass effect
 export const theme = {
   colors: {
     // Primary brand colors - Silver/White theme
@@ -12,6 +12,12 @@ export const theme = {
     surfaceLight: '#12121A',
     card: '#15151F',
     cardHover: '#1A1A25',
+    
+    // Liquid Glass colors
+    glass: 'rgba(255, 255, 255, 0.03)',
+    glassBorder: 'rgba(255, 255, 255, 0.1)',
+    glassHighlight: 'rgba(255, 255, 255, 0.15)',
+    glassShadow: 'rgba(0, 0, 0, 0.4)',
     
     // Text colors
     text: '#FFFFFF',
@@ -39,11 +45,29 @@ export const theme = {
     pinkDim: 'rgba(236, 72, 153, 0.15)',
     
     // Borders
-    border: '#2A2A35',
-    borderLight: '#3A3A45',
+    border: 'rgba(255, 255, 255, 0.08)',
+    borderLight: 'rgba(255, 255, 255, 0.12)',
     
     // Overlay
     overlay: 'rgba(0, 0, 0, 0.7)',
+  },
+  
+  // Glass effect presets
+  glass: {
+    card: {
+      backgroundColor: 'rgba(255, 255, 255, 0.03)',
+      borderColor: 'rgba(255, 255, 255, 0.08)',
+      borderWidth: 1,
+    },
+    cardHover: {
+      backgroundColor: 'rgba(255, 255, 255, 0.06)',
+      borderColor: 'rgba(255, 255, 255, 0.12)',
+    },
+    surface: {
+      backgroundColor: 'rgba(10, 10, 20, 0.8)',
+      borderColor: 'rgba(255, 255, 255, 0.05)',
+    },
+    blur: 20,
   },
   
   spacing: {
@@ -60,6 +84,7 @@ export const theme = {
     md: 12,
     lg: 16,
     xl: 24,
+    xxl: 32,
     full: 9999,
   },
   
@@ -78,6 +103,23 @@ export const theme = {
     medium: '500' as const,
     semibold: '600' as const,
     bold: '700' as const,
+  },
+  
+  shadows: {
+    glass: {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.3,
+      shadowRadius: 16,
+      elevation: 10,
+    },
+    glow: (color: string) => ({
+      shadowColor: color,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.3,
+      shadowRadius: 12,
+      elevation: 8,
+    }),
   },
 };
 

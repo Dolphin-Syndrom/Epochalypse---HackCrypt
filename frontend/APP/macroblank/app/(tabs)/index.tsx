@@ -7,9 +7,11 @@ import {
   TouchableOpacity,
   Dimensions,
   StatusBar,
+  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -113,22 +115,45 @@ export default function HomeScreen() {
           </LinearGradient>
         </Animated.View>
 
-        {/* Stats Row */}
-        <Animated.View entering={FadeInDown.delay(200).duration(600).springify()} style={styles.statsRow}>
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>4</Text>
-            <Text style={styles.statLabel}>Detection Types</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>99%</Text>
-            <Text style={styles.statLabel}>Accuracy</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>&lt;5s</Text>
-            <Text style={styles.statLabel}>Analysis Time</Text>
-          </View>
+        {/* Stats Row - Glass Effect */}
+        <Animated.View entering={FadeInDown.delay(200).duration(600).springify()}>
+          {Platform.OS === 'ios' ? (
+            <BlurView intensity={20} tint="dark" style={styles.statsRowBlur}>
+              <View style={styles.statsRowInner}>
+                <View style={styles.statItem}>
+                  <Text style={styles.statValue}>4</Text>
+                  <Text style={styles.statLabel}>Detection Types</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statItem}>
+                  <Text style={styles.statValue}>99%</Text>
+                  <Text style={styles.statLabel}>Accuracy</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statItem}>
+                  <Text style={styles.statValue}>&lt;5s</Text>
+                  <Text style={styles.statLabel}>Analysis Time</Text>
+                </View>
+              </View>
+            </BlurView>
+          ) : (
+            <View style={styles.statsRow}>
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>4</Text>
+                <Text style={styles.statLabel}>Detection Types</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>99%</Text>
+                <Text style={styles.statLabel}>Accuracy</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>&lt;5s</Text>
+                <Text style={styles.statLabel}>Analysis Time</Text>
+              </View>
+            </View>
+          )}
         </Animated.View>
 
         {/* Section Title */}
@@ -137,7 +162,7 @@ export default function HomeScreen() {
           <Text style={styles.sectionSubtitle}>Choose a category to analyze</Text>
         </Animated.View>
 
-        {/* Detection Cards Grid */}
+        {/* Detection Cards Grid - Glass Effect */}
         <View style={styles.cardsGrid}>
           {detectionCards.map((card, index) => (
             <Animated.View 
@@ -147,26 +172,28 @@ export default function HomeScreen() {
             >
               <TouchableOpacity
                 onPress={() => handleCardPress(card.type)}
-                activeOpacity={0.8}
+                activeOpacity={0.85}
               >
-              <View style={styles.card}>
-                <LinearGradient
-                  colors={card.gradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.cardIconContainer}
-                >
-                  <Ionicons name={card.icon} size={28} color="#FFFFFF" />
-                </LinearGradient>
-                <Text style={styles.cardTitle}>{card.title}</Text>
-                <Text style={styles.cardSubtitle}>{card.subtitle}</Text>
-                <Text style={styles.cardDescription} numberOfLines={2}>
-                  {card.description}
-                </Text>
-                <View style={styles.cardArrow}>
-                  <Ionicons name="arrow-forward" size={18} color={appTheme.colors.textMuted} />
+                <View style={styles.card}>
+                  {/* Glass highlight effect at top */}
+                  <View style={styles.cardHighlight} />
+                  <LinearGradient
+                    colors={card.gradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.cardIconContainer}
+                  >
+                    <Ionicons name={card.icon} size={28} color="#FFFFFF" />
+                  </LinearGradient>
+                  <Text style={styles.cardTitle}>{card.title}</Text>
+                  <Text style={styles.cardSubtitle}>{card.subtitle}</Text>
+                  <Text style={styles.cardDescription} numberOfLines={2}>
+                    {card.description}
+                  </Text>
+                  <View style={styles.cardArrow}>
+                    <Ionicons name="arrow-forward" size={18} color={appTheme.colors.textMuted} />
+                  </View>
                 </View>
-              </View>
               </TouchableOpacity>
             </Animated.View>
           ))}
@@ -223,6 +250,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
+    ...appTheme.shadows.glass,
   },
   headerText: {
     flex: 1,
@@ -242,10 +270,11 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   heroGradient: {
-    borderRadius: 20,
+    borderRadius: 24,
     padding: 24,
     borderWidth: 1,
-    borderColor: 'rgba(232, 232, 236, 0.15)',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    overflow: 'hidden',
   },
   heroTitle: {
     fontSize: 32,
@@ -259,16 +288,31 @@ const styles = StyleSheet.create({
     color: appTheme.colors.textSecondary,
     lineHeight: 24,
   },
+  // Glass Stats Row
+  statsRowBlur: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    marginBottom: 32,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  statsRowInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    padding: 20,
+  },
   statsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    backgroundColor: appTheme.colors.surface,
-    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderRadius: 20,
     padding: 20,
     marginBottom: 32,
     borderWidth: 1,
-    borderColor: appTheme.colors.border,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    ...appTheme.shadows.glass,
   },
   statItem: {
     alignItems: 'center',
@@ -287,7 +331,7 @@ const styles = StyleSheet.create({
   statDivider: {
     width: 1,
     height: 40,
-    backgroundColor: appTheme.colors.border,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
   },
   sectionHeader: {
     marginBottom: 16,
@@ -312,21 +356,37 @@ const styles = StyleSheet.create({
     width: cardWidth,
     marginBottom: 16,
   },
+  // Liquid Glass Card
   card: {
-    backgroundColor: appTheme.colors.surface,
-    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderRadius: 24,
     padding: 20,
     borderWidth: 1,
-    borderColor: appTheme.colors.border,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     minHeight: 180,
+    overflow: 'hidden',
+    ...appTheme.shadows.glass,
+  },
+  cardHighlight: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
   },
   cardIconContainer: {
     width: 56,
     height: 56,
-    borderRadius: 16,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   cardTitle: {
     fontSize: 18,
@@ -357,9 +417,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     padding: 20,
-    borderRadius: 16,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: 'rgba(139, 92, 246, 0.2)',
+    overflow: 'hidden',
   },
   infoTextContainer: {
     flex: 1,
