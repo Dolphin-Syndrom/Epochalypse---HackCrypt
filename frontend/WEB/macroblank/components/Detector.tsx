@@ -10,7 +10,7 @@ import {
 import { clsx } from 'clsx';
 
 // API Base URL
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8002';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 interface AnalysisResult {
   accuracy: number;
@@ -679,16 +679,22 @@ export default function Detector({ type, title }: DetectorProps) {
 
           if (data.prediction !== undefined) {
             // New Video Backend format
-            const prediction = data.prediction; // "FAKE" or "REAL"
-            const score = data.score; // Confidence (0-1)
+            const score = data.score; // Raw score (0-1)
 
-            isFake = prediction === 'FAKE';
-            confidence = score * 100;
+            // The backend returns score as the raw model output
+            // A score < 0.5 means the model is more confident it's FAKE
+            // A score >= 0.5 means the model is more confident it's REAL
+            // Calculate probabilities: fakeProb = 1 - score, realProb = score
+            fakeProb = 1 - score;
+            realProb = score;
+
+            // Determine if fake based on which probability is higher
+            isFake = fakeProb > realProb;
+
+            // Confidence is the winning probability
+            confidence = isFake ? fakeProb * 100 : realProb * 100;
             rawScore = score;
             modelUsed = 'GenConViT (Video-Only)';
-
-            fakeProb = isFake ? score : (1 - score);
-            realProb = isFake ? (1 - score) : score;
           } else {
             // Main Backend format
             isFake = data.is_fake;
@@ -717,8 +723,13 @@ export default function Detector({ type, title }: DetectorProps) {
 
         case 'image': {
           // Ensemble response format: is_fake, confidence, model_scores, heatmap_base64
-          const isFake = data.is_fake;
-          const confidence = data.confidence * 100;
+          // confidence represents the fake probability (0-1)
+          const fakeProb = data.confidence;
+          const realProb = 1 - data.confidence;
+
+          // Determine if fake based on which probability is higher
+          const isFake = fakeProb > realProb;
+          const confidence = isFake ? fakeProb * 100 : realProb * 100;
           const modelScores = data.model_scores || {};
 
           parsedResult = {
@@ -730,12 +741,13 @@ export default function Detector({ type, title }: DetectorProps) {
             class: isFake ? 'FAKE' : 'REAL',
             rawScore: data.confidence,
             modelUsed: 'UFD + NPR Ensemble',
-            probabilities: { real: 1 - data.confidence, fake: data.confidence },
+            probabilities: { real: realProb, fake: fakeProb },
             heatmapBase64: data.heatmap_base64,
             processingTime: data.metadata?.processing_time_ms
           };
           break;
         }
+
 
         case 'audio': {
           const results = data.results;
