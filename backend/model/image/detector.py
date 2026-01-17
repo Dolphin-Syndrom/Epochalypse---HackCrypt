@@ -33,51 +33,11 @@ class ImageDeepfakeDetector:
         img = cv2.imread(image_path)
         if img is None: return None
         
-<<<<<<< HEAD
-        # 1. Step: Face Extraction
-        # Detect face bounding boxes and extract
-        try:
-            boxes, probs = self.mtcnn.detect(img_raw)
-            if boxes is not None and len(boxes) > 0:
-                # Get the first detected face with highest probability
-                box = boxes[0].astype(int)
-                # Add margin
-                margin = 20
-                x1, y1, x2, y2 = box
-                w, h = img_raw.size
-                x1 = max(0, x1 - margin)
-                y1 = max(0, y1 - margin)
-                x2 = min(w, x2 + margin)
-                y2 = min(h, y2 + margin)
-                face_img = img_raw.crop((x1, y1, x2, y2))
-            else:
-                # Fallback: Manual center crop if MTCNN fails
-                w, h = img_raw.size
-                face_img = img_raw.crop((w//4, h//4, 3*w//4, 3*h//4))
-        except Exception:
-            # Fallback: Manual center crop if MTCNN fails
-            w, h = img_raw.size
-            face_img = img_raw.crop((w//4, h//4, 3*w//4, 3*h//4))
-        
-        # Resize face to 224x224 for model input
-        face_img = face_img.resize((224, 224), Image.LANCZOS)
-        
-        # 2. Step: OpenCV Enhancement (Denoise & CLAHE)
-        # Convert PIL to OpenCV BGR
-        open_cv_image = cv2.cvtColor(np.array(face_img), cv2.COLOR_RGB2BGR)
-        
-        # Remove camera sensor grain
-        open_cv_image = cv2.fastNlMeansDenoisingColored(open_cv_image, None, 10, 10, 7, 21)
-        
-        # Normalize lighting to prevent shadow-based false positives
-        lab = cv2.cvtColor(open_cv_image, cv2.COLOR_BGR2LAB)
-=======
         # 1. Denoise
         img = cv2.fastNlMeansDenoisingColored(img, None, 10, 10, 7, 21)
         
         # 2. CLAHE Lighting Normalization
         lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
->>>>>>> dad934de02cd4569d16d2121387b7d19dec8f4ca
         clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
         lab[:,:,0] = clahe.apply(lab[:,:,0])
         img = cv2.cvtColor(lab, cv2.COLOR_LAB2BGR)

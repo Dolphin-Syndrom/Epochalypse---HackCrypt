@@ -63,7 +63,7 @@ class DetectionResponse(BaseModel):
         le=1.0,
         description="Ensemble confidence score"
     )
-    model_scores: Dict[str, float] = Field(
+    model_scores: Dict[str, Any] = Field(
         default_factory=dict,
         description="Individual model scores"
     )

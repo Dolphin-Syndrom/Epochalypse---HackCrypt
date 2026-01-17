@@ -13,6 +13,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+from api.core.config import settings
+
 class AIContentDetector:
     """
     AI-generated content detector using Vertex AI.
@@ -35,9 +37,10 @@ class AIContentDetector:
             location: Vertex AI location
             credentials_file: Path to service account JSON
         """
-        self.project_id = project_id or os.getenv("GOOGLE_CLOUD_PROJECT", "")
-        self.location = location or os.getenv("VERTEX_AI_LOCATION", "us-central1")
-        self.credentials_file = credentials_file or os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "")
+        # Use settings (loaded from .env) as default if args not provided
+        self.project_id = project_id or settings.GOOGLE_CLOUD_PROJECT or os.getenv("GOOGLE_CLOUD_PROJECT", "")
+        self.location = location or settings.VERTEX_AI_LOCATION or os.getenv("VERTEX_AI_LOCATION", "us-central1")
+        self.credentials_file = credentials_file or settings.GOOGLE_APPLICATION_CREDENTIALS or os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "")
         
         self._initialized = False
         self._model = None
@@ -52,18 +55,21 @@ class AIContentDetector:
         if self._initialized:
             return True
         
+        # Check if GCP is configured
+        if not self.project_id:
+            logger.warning("⚠️ AI Content Detector disabled - GOOGLE_CLOUD_PROJECT not set")
+            return False
+        
+        if not self.credentials_file or not os.path.exists(self.credentials_file):
+            logger.warning("⚠️ AI Content Detector disabled - GCP credentials file not found")
+            return False
+            
+        # Explicitly set the environment variable for Google Auth library
+        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = self.credentials_file
+        
         try:
             import vertexai
             from vertexai.generative_models import GenerativeModel
-            
-            # Try to get project ID from credentials file
-            if not self.project_id and self.credentials_file and os.path.exists(self.credentials_file):
-                with open(self.credentials_file) as f:
-                    self.project_id = json.load(f).get("project_id", "")
-            
-            if not self.project_id:
-                logger.error("GOOGLE_CLOUD_PROJECT not set")
-                return False
             
             # Initialize Vertex AI
             vertexai.init(project=self.project_id, location=self.location)
@@ -74,7 +80,7 @@ class AIContentDetector:
             return True
             
         except Exception as e:
-            logger.error(f"❌ Vertex AI init failed: {e}")
+            logger.warning(f"⚠️ AI Content Detector disabled - Vertex AI init failed: {e}")
             return False
     
     @property
@@ -101,7 +107,7 @@ class AIContentDetector:
             if not self.initialize():
                 return {
                     "success": False,
-                    "error": "Vertex AI not initialized"
+                    "error": "AI Content Detection requires GCP credentials. Set GOOGLE_CLOUD_PROJECT and GOOGLE_APPLICATION_CREDENTIALS environment variables."
                 }
         
         try:
