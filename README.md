@@ -17,31 +17,35 @@ The project is organized as follows:
 Epochalypse---HackCrypt/
 ├── backend/                  # Backend API Service
 │   ├── api/                  # Application source code
-│   │   ├── core/             # Core configurations (settings, security, etc.)
-│   │   ├── routes/           # API endpoints (detect, upload, health, etc.)
-│   │   ├── schemas/          # Pydantic models for request/response validation
-│   │   ├── services/         # Business logic and model interaction services
+│   │   ├── core/             # Core configurations (settings, security)
+│   │   ├── routes/           # API endpoints (ai_detection, audio, auth, etc.)
+│   │   ├── schemas/          # Pydantic models for validation
+│   │   ├── services/         # Business logic services
 │   │   ├── utils/            # Utility functions
 │   │   └── main.py           # Application entry point
-│   ├── model/                # ML Models directory
-│   │   └── audio/            # Audio analysis models
-│   ├── ai-detector.html      # Standalone detector interface
-│   ├── ai_detector_backend.py # Standalone detector backend
+│   ├── config/               # Backend configuration files
+│   ├── model/                # AI/ML Models
+│   │   ├── audio/            # Audio detection models
+│   │   ├── image/            # Image detection models
+│   │   └── video/            # Video detection models
+│   ├── ai_detector_backend.py # Standalone detector backend script
 │   ├── Dockerfile            # Backend container definition
 │   └── requirements.txt      # Python dependencies
 │
 ├── frontend/                 # Frontend Applications
-│   ├── WEB/                  # Web Interface (Next.js)
-│   │   └── macroblank/       # Main Next.js project directory
-│   │       ├── app/          # App router pages and layouts
-│   │       ├── public/       # Static assets
-│   │       └── ...           # Next.js configs
-│   └── APP/                  # (Placeholder) Mobile/Desktop Application
+│   ├── WEB/                  # Web Interface
+│   │   └── macroblank/       # Next.js Web Application
+│   └── APP/                  # Native Applications
+│       └── macroblank/       # Mobile/Desktop App source
 │
-├── docs/                     # Project Documentation
+├── docs/                     # Project Documentation (Nextra)
+│   ├── components/           # Documentation components
+│   ├── pages/                # Documentation pages
+│   ├── theme.config.tsx      # Nextra theme configuration
+│   └── package.json
 │
-├── docker-compose.yml        # Docker Compose orchestration file
-└── README.md                 # Project Overview and Documentation
+├── docker-compose.yml        # Docker Compose orchestration
+└── README.md                 # Project Overview
 ```
 
 ## Getting Started

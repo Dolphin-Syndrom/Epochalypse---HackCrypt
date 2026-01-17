@@ -31,6 +31,10 @@ class Settings(BaseSettings):
     MODEL_PATH: str = "./models/weights"
     CONFIDENCE_THRESHOLD: float = 0.5
     
+    # Video Detection Settings
+    VIDEO_FACE_CONFIDENCE_THRESHOLD: float = 0.3
+    VIDEO_FAKE_THRESHOLD: float = 0.5
+    
     # Security
     SECRET_KEY: str = "your-secret-key-change-in-production"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
