@@ -36,3 +36,9 @@ librosa
 soundfile
 facenet-pytorch
 
+# Video Detection Dependencies
+ultralytics
+scipy
+torchaudio
+opencv-python
+
