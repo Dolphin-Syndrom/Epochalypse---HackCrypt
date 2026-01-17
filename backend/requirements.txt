@@ -18,7 +18,12 @@ pytest-asyncio>=0.21.0
 httpx>=0.25.0
 google-cloud-aiplatform>=1.38.0
 
-# EfficientNet + Grad-CAM for image deepfake detection
+# Universal Fake Detect (CLIP-based deepfake detector)
+git+https://github.com/openai/CLIP.git
+ftfy>=6.1.0
+regex>=2023.0.0
+
+# EfficientNet + Grad-CAM (legacy, kept for ensemble option)
 efficientnet-pytorch>=0.7.1
 grad-cam>=1.5.0
 
