@@ -84,6 +84,7 @@ export async function detectVideo(uri: string, filename: string, numFrames = 15)
       prediction: isFake ? 'FAKE' : 'REAL',
       confidence,
       model: data.metadata?.model_variant || 'GenConViT-ED',
+      explanation: data.explanation // Pass through LLM explanation
     };
   } catch (error) {
     throw error;

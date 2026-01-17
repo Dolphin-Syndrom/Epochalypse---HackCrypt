@@ -14,7 +14,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8002';
 
 interface AnalysisResult {
   accuracy: number;
-  explanation: string;
+  explanation: string | null;
   f1: number;
   precision: number;
   recall: number;
@@ -25,6 +25,8 @@ interface AnalysisResult {
   modelUsed?: string;
   heatmapBase64?: string;
   probabilities?: { real: number; fake: number };
+  // New field
+  backendExplanation?: string;
   bonafide?: number;
   spoof?: number;
   audioVerdict?: string;
@@ -699,12 +701,12 @@ export default function Detector({ type, title }: DetectorProps) {
 
           parsedResult = {
             accuracy: confidence,
-            explanation: isFake
+            explanation: data.explanation || (isFake
               ? `${modelUsed} detected manipulation patterns across video frames with ${confidence.toFixed(1)}% confidence. Temporal inconsistencies suggest synthetic alteration.`
-              : `${modelUsed} found no significant manipulation artifacts. The video appears authentic with ${confidence.toFixed(1)}% confidence.`,
+              : `${modelUsed} found no significant manipulation artifacts. The video appears authentic with ${confidence.toFixed(1)}% confidence.`),
             f1: 0.94, precision: 0.96, recall: 0.92,
             class: isFake ? 'FAKE' : 'REAL',
-            framesAnalyzed: data.metadata?.frames_analyzed, // Might be undefined in new backend
+            framesAnalyzed: data.metadata?.frames_analyzed,
             processingTime: data.metadata?.processing_time_ms,
             rawScore,
             modelUsed: modelUsed,
@@ -1042,38 +1044,7 @@ export default function Detector({ type, title }: DetectorProps) {
               </div>
             </div>
 
-            {/* AI Explanation Card */}
-            {result && (result.explanation || (result.indicators && result.indicators.length > 0)) && (
-              <div className="bg-gradient-to-br from-[#1a1a1c] to-[#111113] border border-gray-800 rounded-2xl p-5 space-y-4 animate-in fade-in slide-in-from-left-4">
-                {result.explanation && (
-                  <>
-                    <div className="flex items-center gap-2">
-                      <div className="p-1.5 bg-[var(--primary)]/20 rounded-lg">
-                        <Sparkles className="w-4 h-4 text-[var(--primary)]" />
-                      </div>
-                      <div className="flex flex-col">
-                        <h3 className="text-white font-medium">AI Analysis</h3>
-                      </div>
-                    </div>
-                    <p className="text-gray-400 text-sm leading-relaxed">{result.explanation}</p>
-                  </>
-                )}
 
-                {result.indicators && result.indicators.length > 0 && (
-                  <div className="pt-3 border-t border-gray-800/50">
-                    <h4 className="text-gray-300 text-xs font-semibold uppercase tracking-wider mb-2">Key Indicators</h4>
-                    <ul className="space-y-1.5">
-                      {result.indicators.map((indicator, idx) => (
-                        <li key={idx} className="text-gray-400 text-sm flex items-start gap-2">
-                          <span className="mt-1.5 w-1 h-1 rounded-full bg-[var(--primary)] flex-shrink-0" />
-                          {indicator}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
 
           {/* Results Section - Right */}
@@ -1276,6 +1247,39 @@ export default function Detector({ type, title }: DetectorProps) {
                       value={result.probabilities.fake * 100}
                       color="#ef4444"
                     />
+                  </div>
+                )}
+
+                {/* AI Explanation Card (Moved) */}
+                {result.probabilities && (result.explanation || (result.indicators && result.indicators.length > 0)) && (
+                  <div className="bg-gradient-to-br from-[#1a1a1c] to-[#111113] border border-gray-800 rounded-2xl p-5 space-y-4 animate-in fade-in slide-in-from-bottom-2">
+                    {result.explanation && (
+                      <>
+                        <div className="flex items-center gap-2">
+                          <div className="p-1.5 bg-[var(--primary)]/20 rounded-lg">
+                            <Sparkles className="w-4 h-4 text-[var(--primary)]" />
+                          </div>
+                          <div className="flex flex-col">
+                            <h3 className="text-white font-medium">AI Analysis</h3>
+                          </div>
+                        </div>
+                        <p className="text-gray-400 text-sm leading-relaxed">{result.explanation}</p>
+                      </>
+                    )}
+
+                    {result.indicators && result.indicators.length > 0 && (
+                      <div className="pt-3 border-t border-gray-800/50">
+                        <h4 className="text-gray-300 text-xs font-semibold uppercase tracking-wider mb-2">Key Indicators</h4>
+                        <ul className="space-y-1.5">
+                          {result.indicators.map((indicator, idx) => (
+                            <li key={idx} className="text-gray-400 text-sm flex items-start gap-2">
+                              <span className="mt-1.5 w-1 h-1 rounded-full bg-[var(--primary)] flex-shrink-0" />
+                              {indicator}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
                 )}
 
