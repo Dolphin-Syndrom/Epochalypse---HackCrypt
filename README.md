@@ -1,4 +1,5 @@
 <div align="center">
+
 # MacroBlank
 
 ### **Advanced Adversarial Deepfake Detection Platform**
