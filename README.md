@@ -18,10 +18,6 @@
 
 ---
 
-## 🎯 Problem Statement Alignment
-
-This platform is built to address the **HackCrypt Deepfake Detection Challenge**, delivering a robust solution that tackles each requirement:
-
 | Challenge Requirement | Our Solution |
 |----------------------|--------------|
 | **High accuracy under real-world conditions** | Ensemble stacking with Universal Fake Detect (CLIP-based) + NPR detector for robust cross-validation |
