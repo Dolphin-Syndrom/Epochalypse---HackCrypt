@@ -1,8 +1,5 @@
 <div align="center">
-
-# 🛡️HC-037: Epochalypse 
-
-## PS HC-201: MacroBlank
+MacroBlank
 
 ### **Advanced Adversarial Deepfake Detection Platform**
 
