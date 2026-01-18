@@ -309,22 +309,9 @@ file: <audio_file>
 
 ---
 
-## 👥 Team — MacroBlank
-
-Built with ❤️ for **HackCrypt 2026** by Team MacroBlank
-
----
-
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
-<div align="center">
-
-**⭐ Star this repository if you find it useful!**
-
-[Report Bug](https://github.com/your-org/Epochalypse---HackCrypt/issues) • [Request Feature](https://github.com/your-org/Epochalypse---HackCrypt/issues)
-
-</div>
